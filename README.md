@@ -6,9 +6,11 @@ The goal is simple: make it easier to stay connected consistently. FriendsApp he
 
 ## Screenshots
 
-![FriendsApp Screenshot 1](../../screenshots/ios/screenshot_1.png)
-![FriendsApp Screenshot 2](../../screenshots/ios/screenshot_2.png)
-![FriendsApp Screenshot 3](../../screenshots/ios/screenshot_3.png)
+<p align="center">
+  <img src="screenshots/ios/screenshot_1.png" alt="FriendsApp Screenshot 1" width="32%" />
+  <img src="screenshots/ios/screenshot_2.png" alt="FriendsApp Screenshot 2" width="32%" />
+  <img src="screenshots/ios/screenshot_3.png" alt="FriendsApp Screenshot 3" width="32%" />
+</p>
 
 ## Highlights
 
