@@ -1,107 +1,148 @@
-# Friend Notes
+# Friend Notes (iOS)
 
-Friend Notes is an iOS app built to help you take better care of your friendships in everyday life. Instead of relying on memory alone, the app gives you a structured and private place to keep track of the people who matter to you: their personal details, shared moments, birthdays, and meaningful notes.
+Friend Notes helps you stay close to the people who matter most.  
+Track friends, birthdays, meetings/events, and gift ideas in one private, local-first app.
 
-The goal is simple: make it easier to stay connected consistently. Friend Notes helps you remember important dates, plan meetings and events, capture gift ideas, and maintain context over time so relationships do not fade in a busy schedule.
+**Status:** The app is currently **not** available on the App Store.
+  
+**Platform:** iPhone only (portrait mode).
+
+Repository: [frievoe97/friend-notes](https://github.com/frievoe97/friend-notes)
+
+## Target & Quick Start
+
+Friend Notes is built for people who want a lightweight personal CRM without complexity.  
+It turns scattered mental notes into a simple, searchable workflow on iPhone.
+
+## Features
+
+- Keep a structured friend list with names, nicknames, tags, birthday, and favorites.
+- Add category notes per friend (hobbies, food, music, movies/series, free notes).
+- Plan meetings and events with date/time, participants, and notes.
+- Browse plans in calendar mode or upcoming-list mode.
+- Capture gift ideas globally and per friend, including notes and links.
+- Get local reminders for birthdays, meetings/events, long time no see, and post-meeting notes.
+- Use deep links from notifications directly to the relevant friend or event.
+- Use the app in German and English.
 
 ## Screenshots
 
-<p align="center">
-  <img src="screenshots/ios/screenshot_1.png" alt="Friend Notes Screenshot 1" width="32%" />
-  <img src="screenshots/ios/screenshot_2.png" alt="Friend Notes Screenshot 2" width="32%" />
-  <img src="screenshots/ios/screenshot_3.png" alt="Friend Notes Screenshot 3" width="32%" />
-</p>
-
-## Highlights
-
-- Friend profiles with name, nickname, birthday, tags, and personal lists (notes, hobbies, music, food, movies/series)
-- Calendar view with event markers and optional birthday indicators
-- Additional "Upcoming" view for upcoming birthdays, meetings, and events
-- Meetings and events with start/end time, participants, and notes
-- Gift ideas per friend, including an "already gifted" status
-- Local iOS reminders for:
-  - Birthdays
-  - Meetings
-  - Events
-  - "Long time no see"
-  - Post-meeting note reminders
-- Global app settings for notifications, calendar display, and tag management
-- Localization via `Localizable.strings` (German and English)
+| Friends | Calendar | Gift Ideas |
+|---|---|---|
+| ![Friends list and relationship overview](docs/screenshots/ios/screenshot_1.png) | ![Upcoming calendar entries and planning](docs/screenshots/ios/screenshot_2.png) | ![Gift ideas with open and completed states](docs/screenshots/ios/screenshot_3.png) |
 
 ## Tech Stack
 
-- `Swift`
-- `SwiftUI`
-- `SwiftData`
-- `UserNotifications`
-- `AppStorage` / `UserDefaults`
+- `Swift` + `SwiftUI`
+- `SwiftData` for persistence
+- `UserNotifications` for local reminders
+- `XCTest` for unit tests
+- `Localizable.strings` + lightweight `L10n` helper for localization
+
+## Architecture
+
+The app follows a **feature-first SwiftUI architecture** with a clear separation of concerns:
+
+- `Domain`: core models (`Friend`, `Meeting`, `GiftIdea`, `FriendEntry`) and localization helper
+- `Features`: screen-level UI grouped by business feature (`Friends`, `Calendar`, `Gifts`, `Meetings`, `Settings`)
+- `Services`: cross-cutting services such as notification scheduling/routing
+- `UI`: reusable components and visual theme primitives
+- `App`: app entry point and support utilities
+
+Key decisions:
+
+- Local-first data model with `SwiftData` (no backend dependency).
+- Shared notification scheduler that rebuilds reminders from persisted models + global settings.
+- Centralized global settings via `@AppStorage`.
+
+## Installation / Setup
+
+### Requirements
+
+- macOS with **Xcode 26.2+**
+- iOS Simulator or device with **iOS 26.2+**
+
+### Steps
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/frievoe97/friend-notes.git
+   ```
+2. Open the iOS project:
+   ```bash
+   cd friend-notes/apps/ios/Friend\ Notes
+   open "Friend Notes.xcodeproj"
+   ```
+3. Select the **Friend Notes** scheme.
+4. Select an iPhone simulator/device.
+5. Build and run (`Cmd + R`).
+
+### Run Unit Tests
+
+- In Xcode: `Cmd + U`
+- Test target: `Friend NotesTests`
 
 ## Project Structure
 
 ```text
-Friend Notes/
-├─ FriendNotesApp.swift          # App entry, SwiftData container, notification delegate
-├─ ContentView.swift            # Root tabs + friends list
-├─ FriendDetailView.swift       # Create/edit friends + gift ideas
-├─ CalendarView.swift           # Calendar and upcoming views
-├─ MeetingDetailView.swift      # Create/edit meetings and events
-├─ SettingsView.swift           # Global settings + privacy view
-├─ NotificationService.swift    # Scheduling and management of local notifications
-├─ Item.swift                   # Model: Friend
-├─ Meeting.swift                # Model: Meeting + MeetingKind
-├─ GiftIdea.swift               # Model: GiftIdea
-├─ DataMaintenance.swift        # Data cleanup for destructive operations
-├─ AppTagStore.swift            # Global tag persistence
-├─ L10n.swift                   # Localization helper
-├─ de.lproj/Localizable.strings
-└─ en.lproj/Localizable.strings
+friend-notes/
+├─ apps/
+│  └─ ios/
+│     └─ Friend Notes/
+│        ├─ Friend Notes.xcodeproj
+│        ├─ Friend Notes/        # iOS app source
+│        │  ├─ App/              # App entry + app-level support
+│        │  ├─ Domain/           # Models + localization
+│        │  ├─ Features/         # Feature modules (Friends/Calendar/Gifts/...)
+│        │  ├─ Services/         # Notification and other services
+│        │  └─ UI/               # Shared UI components + theme
+│        └─ Friend NotesTests/   # Unit tests
+├─ assets/
+│  └─ design/                    # Logo/icon source files and exports
+├─ docs/
+│  └─ screenshots/
+│     └─ ios/                    # App screenshots used in docs
+├─ README.md
+└─ LICENSE
 ```
 
-## Data Model (Overview)
+## Usage
 
-- `Friend`
-  - Core profile data (name, nickname, birthday)
-  - Collections (tags, notes, hobbies, food, music, movies/series)
-  - Relationships to `Meeting` and `GiftIdea`
-- `Meeting`
-  - Type: `meeting` or `event`
-  - Time range, note, optional participants, and event title
-- `GiftIdea`
-  - Title, note, status (`isGifted`), and creation date
+1. Create friends in the **Friends** tab.
+2. Add profile context (tags, birthday, notes, interests).
+3. Schedule meetings/events via **Calendar** or from a friend profile.
+4. Track gift ideas in **Gifts** and assign them to friends.
+5. Configure reminder behavior in **Settings**.
 
-## Requirements
+## Configuration
 
-- macOS with Xcode
-- iOS Simulator or physical iOS device
-- Deployment target is currently set to `iOS 26.2`
+- No API keys or external services are required.
+- Notifications require user permission at runtime.
+- Global notification behavior is configured in app settings.
+- Global friend tags are managed centrally in settings and reused across profiles.
 
-## Getting Started
+## Roadmap
 
-1. Open the project in Xcode:
-   - `Friend Notes.xcodeproj`
-2. Select an iOS simulator device
-3. Build and run (`Cmd + R`)
+- [ ] iCloud sync / cross-device sync
+- [ ] Data export and backup options
+- [ ] Home Screen widgets for upcoming reminders
+- [ ] More filtering and analytics for relationship history
 
-## Notifications
+## Contribution
 
-When reminders are enabled for the first time, the app requests iOS notification permission. All reminders are scheduled locally on the device (no external notification server).
+Contributions are welcome.
 
-## Privacy
-
-- Contact and app data are stored locally on the device (`SwiftData` / `UserDefaults`)
-- No automatic transfer of data to third parties within the app logic
-- Reminders are implemented as local iOS notifications
-
-Note: The app also includes an integrated privacy view under `Settings -> Privacy Policy`.
-
-## Quality and Next Steps
-
-Recommended follow-up improvements:
-
-- Unit tests for core logic (for example notification scheduling)
-- UI tests for critical flows (create contact, create meeting, configure reminders)
-- Optional CI setup for automated builds and tests
+1. Fork the repository.
+2. Create a feature branch.
+3. Keep changes focused and consistent with the existing folder structure.
+4. Add or update tests for logic changes.
+5. Open a pull request with a clear description and screenshots if UI changed.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the [LICENSE](./LICENSE) file.
+
+## Author / Contact
+
+- Friedrich Voelkers
+- GitHub: [@frievoe97](https://github.com/frievoe97)
