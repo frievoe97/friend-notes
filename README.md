@@ -7,8 +7,6 @@ Track friends, birthdays, meetings/events, and gift ideas in one private, local-
   
 **Platform:** iPhone only (portrait mode).
 
-Repository: [frievoe97/friend-notes](https://github.com/frievoe97/friend-notes)
-
 ## Target & Quick Start
 
 Friend Notes is built for people who want a lightweight personal CRM without complexity.  
@@ -16,20 +14,28 @@ It turns scattered mental notes into a simple, searchable workflow on iPhone.
 
 ## Features
 
-- Keep a structured friend list with names, nicknames, tags, birthday, and favorites.
-- Add category notes per friend (hobbies, food, music, movies/series, free notes).
-- Plan meetings and events with date/time, participants, and notes.
-- Browse plans in calendar mode or upcoming-list mode.
-- Capture gift ideas globally and per friend, including notes and links.
-- Get local reminders for birthdays, meetings/events, long time no see, and post-meeting notes.
-- Use deep links from notifications directly to the relevant friend or event.
-- Use the app in German and English.
+Friend Notes is designed as a personal relationship manager that stays lightweight and practical in daily life.
+
+- Build and maintain a clear friend database with name, nickname, birthday, tags, favorites, and personal profile context.
+- Store rich friend-specific notes in structured categories like hobbies, food preferences, music, movies/series, and free-text notes.
+- Keep relationship history alive by adding entries and context over time instead of losing details in chats or memory.
+- Plan meetings and events with exact date/time, participants, type, and notes so plans are visible and easy to manage.
+- Create events directly in context of a friend or from the calendar flow.
+- Track everything in two planning modes: calendar view for date-based planning and upcoming list for near-term priorities.
+- Capture gift ideas globally and per friend, including notes and links, and mark items as completed once gifted.
+- Configure reminder behavior for birthdays, meetings, events, long time no see, and post-meeting follow-ups.
+- Open the right screen directly from notifications via deep-link routing.
+- Manage reusable global friend tags centrally in settings and assign them quickly across profiles.
+- Use the app fully offline with local data persistence and local notifications.
+- Switch between German and English with built-in localization.
 
 ## Screenshots
 
-| Friends | Calendar | Gift Ideas |
-|---|---|---|
-| ![Friends list and relationship overview](docs/screenshots/ios/screenshot_1.png) | ![Upcoming calendar entries and planning](docs/screenshots/ios/screenshot_2.png) | ![Gift ideas with open and completed states](docs/screenshots/ios/screenshot_3.png) |
+<p align="center">
+  <img src="docs/screenshots/ios/screenshot_1.png" alt="Friends list and relationship overview" width="280" />
+  <img src="docs/screenshots/ios/screenshot_2.png" alt="Upcoming calendar entries and planning" width="280" />
+  <img src="docs/screenshots/ios/screenshot_3.png" alt="Gift ideas with open and completed states" width="280" />
+</p>
 
 ## Tech Stack
 
@@ -64,18 +70,14 @@ Key decisions:
 
 ### Steps
 
-1. Clone the repository:
+1. Open the iOS project:
    ```bash
-   git clone https://github.com/frievoe97/friend-notes.git
-   ```
-2. Open the iOS project:
-   ```bash
-   cd friend-notes/apps/ios/Friend\ Notes
+   cd apps/ios/Friend\ Notes
    open "Friend Notes.xcodeproj"
    ```
-3. Select the **Friend Notes** scheme.
-4. Select an iPhone simulator/device.
-5. Build and run (`Cmd + R`).
+2. Select the **Friend Notes** scheme.
+3. Select an iPhone simulator/device.
+4. Build and run (`Cmd + R`).
 
 ### Run Unit Tests
 
@@ -121,28 +123,6 @@ friend-notes/
 - Global notification behavior is configured in app settings.
 - Global friend tags are managed centrally in settings and reused across profiles.
 
-## Roadmap
-
-- [ ] iCloud sync / cross-device sync
-- [ ] Data export and backup options
-- [ ] Home Screen widgets for upcoming reminders
-- [ ] More filtering and analytics for relationship history
-
-## Contribution
-
-Contributions are welcome.
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Keep changes focused and consistent with the existing folder structure.
-4. Add or update tests for logic changes.
-5. Open a pull request with a clear description and screenshots if UI changed.
-
 ## License
 
 This project is licensed under the terms of the [LICENSE](./LICENSE) file.
-
-## Author / Contact
-
-- Friedrich Voelkers
-- GitHub: [@frievoe97](https://github.com/frievoe97)
