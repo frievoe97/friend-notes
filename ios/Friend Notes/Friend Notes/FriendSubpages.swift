@@ -134,22 +134,28 @@ struct AddFriendEntrySheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField(L10n.text("entry.name", "Title"), text: $title)
-                        .textFieldStyle(.plain)
-                        .focused($focusedField, equals: .title)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .note }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("entry.name", "Title"))
+                        TextField("", text: $title)
+                            .textFieldStyle(.plain)
+                            .focused($focusedField, equals: .title)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .note }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
 
-                    TextField(L10n.text("entry.note", "Note (optional)"), text: $note, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(4...)
-                        .focused($focusedField, equals: .note)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("entry.note", "Note (optional)"))
+                        TextField("", text: $note, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(4...)
+                            .focused($focusedField, equals: .note)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -181,6 +187,12 @@ struct AddFriendEntrySheet: View {
         }
         .appScreenBackground()
     }
+
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+    }
 }
 
 // MARK: - Edit Entry Sheet
@@ -206,23 +218,62 @@ struct EditFriendEntrySheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                let canClearTitle = !draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let canClearNote = !draftNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField(L10n.text("entry.name", "Title"), text: $draftTitle)
-                        .textFieldStyle(.plain)
-                        .focused($focusedField, equals: .title)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .note }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("entry.name", "Title"))
+                        HStack(spacing: 8) {
+                            TextField("", text: $draftTitle)
+                                .textFieldStyle(.plain)
+                                .focused($focusedField, equals: .title)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .note }
 
-                    TextField(L10n.text("entry.note", "Note (optional)"), text: $draftNote, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(4...)
-                        .focused($focusedField, equals: .note)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Button {
+                                draftTitle = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearTitle ? 1 : 0)
+                            .disabled(!canClearTitle)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("entry.note", "Note (optional)"))
+                        HStack(alignment: .top, spacing: 8) {
+                            TextField("", text: $draftNote, axis: .vertical)
+                                .textFieldStyle(.plain)
+                                .lineLimit(4...)
+                                .focused($focusedField, equals: .note)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Button {
+                                draftNote = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearNote ? 1 : 0)
+                            .disabled(!canClearNote)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -254,6 +305,12 @@ struct EditFriendEntrySheet: View {
             }
         }
         .appScreenBackground()
+    }
+
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -355,7 +412,7 @@ struct FriendMeetingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .navigationTitle(L10n.text("friend.section.history", "Meetings/Events"))
+        .navigationTitle(L10n.text("friend.section.history", "Meetings / Events"))
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -382,7 +439,7 @@ struct FriendMeetingsView: View {
             if upcoming.isEmpty && past.isEmpty {
                 ContentUnavailableView {
                     Label(
-                        L10n.text("friend.section.history", "Meetings/Events"),
+                        L10n.text("friend.section.history", "Meetings / Events"),
                         systemImage: "clock.arrow.circlepath"
                     )
                 } description: {
@@ -439,12 +496,12 @@ struct FriendGiftsView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var showingAddGiftIdea = false
-    @State private var editingGiftIdea: GiftIdea?
+    @State private var selectedGiftIdea: GiftIdea?
 
-    private var editingSheetBinding: Binding<Bool> {
+    private var detailSheetBinding: Binding<Bool> {
         Binding(
-            get: { editingGiftIdea != nil },
-            set: { if !$0 { editingGiftIdea = nil } }
+            get: { selectedGiftIdea != nil },
+            set: { if !$0 { selectedGiftIdea = nil } }
         )
     }
 
@@ -476,9 +533,9 @@ struct FriendGiftsView: View {
                 addGiftIdea(title: title, note: note, url: url)
             }
         }
-        .sheet(isPresented: editingSheetBinding) {
-            if let idea = editingGiftIdea {
-                EditGiftIdeaSheet(idea: idea)
+        .sheet(isPresented: detailSheetBinding) {
+            if let idea = selectedGiftIdea {
+                GiftIdeaDetailSheet(idea: idea, allowsAssigneeEditing: false)
             }
         }
     }
@@ -581,7 +638,7 @@ struct FriendGiftsView: View {
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())
-        .onTapGesture { editingGiftIdea = idea }
+        .onTapGesture { selectedGiftIdea = idea }
     }
 
     private func addGiftIdea(title: String, note: String, url: String) {

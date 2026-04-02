@@ -39,6 +39,7 @@
 "friend.first_name" = "Vorname";
 "friend.last_name" = "Nachname";
 "friend.nickname" = "Spitzname";
+"friend.name_required" = "Name oder Spitzname erforderlich.";
 "friend.section.birthday" = "Geburtstag";
 "friend.add_birthday" = "Geburtstag hinzufügen";
 "friend.no_birthday" = "Kein Geburtstag gesetzt";
@@ -55,7 +56,7 @@
 "friend.placeholder.add_music" = "Musik hinzufügen…";
 "friend.placeholder.add_movie_series" = "Film oder Serie hinzufügen…";
 "friend.placeholder.add_note" = "Notiz hinzufügen…";
-"friend.section.history" = "Treffen/Ereignisse";
+"friend.section.history" = "Treffen / Ereignisse";
 "friend.history.empty" = "Noch keine Treffen oder Ereignisse. Füge im Kalender eines hinzu.";
 "friend.history.show_all" = "Alle anzeigen (%d)";
 "friend.history.show_less" = "Weniger anzeigen";
@@ -97,7 +98,10 @@
 "gift.name" = "Name";
 "gift.note" = "Notiz";
 "gift.url" = "URL";
+"gift.url.clear" = "URL löschen";
 "gift.already_gifted" = "Schon geschenkt";
+"gift.delete.button" = "Geschenkidee löschen";
+"gift.delete.title" = "Geschenkidee löschen?";
 
 "list.edit_entry" = "Eintrag bearbeiten";
 
@@ -213,27 +217,6 @@
 "privacy.deletion.title" = "Löschung";
 "privacy.deletion.body" = "Du kannst Kontakte, Treffen/Ereignisse und Inhalte jederzeit in der App löschen.";
 "privacy.updated" = "Stand: 26. März 2026";
-
-"onboarding.skip" = "Überspringen";
-"onboarding.back" = "Zurück";
-"onboarding.next" = "Weiter";
-"onboarding.start" = "Los geht's";
-"onboarding.step1.title" = "Willkommen bei Friend Notes";
-"onboarding.step1.message" = "Behalte wichtige Details zu deinen Kontakten an einem Ort.";
-"onboarding.step1.h1" = "Erstelle Freunde mit Tags, Geburtstagen und Notizen";
-"onboarding.step1.h2" = "Markiere Favoriten und halte Profile übersichtlich";
-"onboarding.step2.title" = "Treffen & Events planen";
-"onboarding.step2.message" = "Verwalte vergangene und kommende Zeit mit Freunden direkt im Kalender.";
-"onboarding.step2.h1" = "Lege Treffen/Events an und verknüpfe eine oder mehrere Personen";
-"onboarding.step2.h2" = "Erhalte Erinnerungen und springe aus Notifications direkt in Details";
-"onboarding.step3.title" = "Geschenkideen verwalten";
-"onboarding.step3.message" = "Sammle Ideen mit Notizen und Links und markiere Geschenke als erledigt.";
-"onboarding.step3.h1" = "Ordne Geschenke einer Person zu oder lasse sie ohne Zuordnung";
-"onboarding.step3.h2" = "Filtere offene/erledigte Ideen für einen klaren Überblick";
-"onboarding.step4.title" = "Passe alles an";
-"onboarding.step4.message" = "Stelle Erinnerungen und App-Verhalten jederzeit in den Einstellungen ein.";
-"onboarding.step4.h1" = "Steuere Reminder-Kategorien und Uhrzeit";
-"onboarding.step4.h2" = "Nutze Tags für eine schnellere Übersicht deiner Freunde";
 
 "notification.birthday.title" = "Geburtstag: %@";
 "notification.birthday.body" = "%@ hat bald Geburtstag.";

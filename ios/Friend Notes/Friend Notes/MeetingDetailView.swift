@@ -194,16 +194,33 @@ struct MeetingDetailView: View {
                 .padding(.horizontal, 24)
 
             if isEditing {
-                TextField(
-                    L10n.text("event.title.placeholder", "Event title"),
-                    text: $meeting.eventTitle
-                )
-                .font(.title3.weight(.semibold))
-                .padding(.horizontal, 24)
-                .textInputAutocapitalization(.sentences)
-                .focused($focusedField, equals: .eventTitle)
-                .submitLabel(.next)
-                .onSubmit { focusedField = .note }
+                let canClearTitle = !meeting.eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                HStack(spacing: 8) {
+                    TextField("", text: $meeting.eventTitle)
+                        .textFieldStyle(.plain)
+                        .font(.title3.weight(.semibold))
+                        .textInputAutocapitalization(.sentences)
+                        .focused($focusedField, equals: .eventTitle)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .note }
+
+                    Button {
+                        meeting.eventTitle = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                    .opacity(canClearTitle ? 1 : 0)
+                    .disabled(!canClearTitle)
+                }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 24)
             } else {
                 Text(meeting.displayTitle)
                     .font(.title3.weight(.semibold))
@@ -308,7 +325,6 @@ struct MeetingDetailView: View {
             if isEditing {
                 NoteEditorCard(
                     text: $meetingNoteDraft,
-                    placeholder: L10n.text("meeting.note.placeholder", "Add a note…"),
                     minHeight: 132
                 ) {
                     TextEditor(text: $meetingNoteDraft)
@@ -534,10 +550,15 @@ private struct FriendMultiSelectView: View {
             VStack(alignment: .leading, spacing: 10) {
                 selectedCountRow
 
+                Text(L10n.text("meeting.friends.search", "Search friends"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
-                    TextField(L10n.text("meeting.friends.search", "Search friends"), text: $searchText)
+                    TextField("", text: $searchText)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
                     if !searchText.isEmpty {
@@ -805,7 +826,6 @@ struct AddMeetingView: View {
             sectionLabel(L10n.text("meeting.section.note", "Note"), icon: "note.text")
             NoteEditorCard(
                 text: $note,
-                placeholder: L10n.text("meeting.note.placeholder", "Add a note…"),
                 minHeight: 132
             ) {
                 TextEditor(text: $note)
@@ -1048,16 +1068,17 @@ struct AddEventView: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 24)
-            TextField(
-                L10n.text("event.title.placeholder", "Event title"),
-                text: $eventTitle
-            )
-            .font(.title3.weight(.semibold))
-            .padding(.horizontal, 24)
-            .textInputAutocapitalization(.sentences)
-            .focused($focusedField, equals: .eventTitle)
-            .submitLabel(.next)
-            .onSubmit { focusedField = .note }
+            TextField("", text: $eventTitle)
+                .textFieldStyle(.plain)
+                .font(.title3.weight(.semibold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal, 24)
+                .textInputAutocapitalization(.sentences)
+                .focused($focusedField, equals: .eventTitle)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .note }
         }
     }
 
@@ -1113,7 +1134,6 @@ struct AddEventView: View {
             sectionLabel(L10n.text("meeting.section.note", "Note"), icon: "note.text")
             NoteEditorCard(
                 text: $note,
-                placeholder: L10n.text("meeting.note.placeholder", "Add a note…"),
                 minHeight: 132
             ) {
                 TextEditor(text: $note)
@@ -1257,32 +1277,16 @@ struct AddEventView: View {
 /// Reusable editor card used for meeting/event notes in create and edit flows.
 private struct NoteEditorCard<Editor: View>: View {
     @Binding var text: String
-    let placeholder: String
     let minHeight: CGFloat
     @ViewBuilder let editor: () -> Editor
 
-    private var isEmpty: Bool {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            if isEmpty {
-                Text(placeholder)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .allowsHitTesting(false)
-            }
-
-            editor()
-                .frame(minHeight: minHeight, alignment: .topLeading)
-                // TextEditor has an intrinsic inner inset; compensate so edit/view spacing matches.
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .scrollContentBackground(.hidden)
-        }
+        editor()
+            .frame(minHeight: minHeight, alignment: .topLeading)
+            // TextEditor has an intrinsic inner inset; compensate so edit/view spacing matches.
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .scrollContentBackground(.hidden)
         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

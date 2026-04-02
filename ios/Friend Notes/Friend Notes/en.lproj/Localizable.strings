@@ -39,6 +39,7 @@
 "friend.first_name" = "First Name";
 "friend.last_name" = "Last Name";
 "friend.nickname" = "Nickname";
+"friend.name_required" = "Name or nickname required.";
 "friend.section.birthday" = "Birthday";
 "friend.add_birthday" = "Add Birthday";
 "friend.no_birthday" = "No birthday set";
@@ -55,7 +56,7 @@
 "friend.placeholder.add_music" = "Add music…";
 "friend.placeholder.add_movie_series" = "Add movie or series…";
 "friend.placeholder.add_note" = "Add note…";
-"friend.section.history" = "Meetings/Events";
+"friend.section.history" = "Meetings / Events";
 "friend.history.empty" = "No meetings or events yet. Add one in the Calendar tab.";
 "friend.history.show_all" = "Show all (%d)";
 "friend.history.show_less" = "Show fewer";
@@ -97,7 +98,10 @@
 "gift.name" = "Name";
 "gift.note" = "Note";
 "gift.url" = "URL";
+"gift.url.clear" = "Clear URL";
 "gift.already_gifted" = "Already gifted";
+"gift.delete.button" = "Delete Gift Idea";
+"gift.delete.title" = "Delete Gift Idea?";
 
 "list.edit_entry" = "Edit entry";
 
@@ -207,26 +211,6 @@
 "privacy.storage.title" = "Data Storage";
 "privacy.storage.body" = "Name, nickname, birthday, tags, notes, hobbies, food, music, movies/series, meetings, events, gift ideas and notification settings.";
 
-"onboarding.skip" = "Skip";
-"onboarding.back" = "Back";
-"onboarding.next" = "Next";
-"onboarding.start" = "Start";
-"onboarding.step1.title" = "Welcome to Friend Notes";
-"onboarding.step1.message" = "Keep the important details about your people in one place.";
-"onboarding.step1.h1" = "Create friends with tags, birthdays and notes";
-"onboarding.step1.h2" = "Pin favorites and keep profiles organized";
-"onboarding.step2.title" = "Plan Meetings & Events";
-"onboarding.step2.message" = "Track past and upcoming time with friends directly in the calendar.";
-"onboarding.step2.h1" = "Add meetings/events and link one or multiple people";
-"onboarding.step2.h2" = "Get reminders and jump from notifications into details";
-"onboarding.step3.title" = "Manage Gift Ideas";
-"onboarding.step3.message" = "Collect ideas with notes and links, and mark gifts as completed.";
-"onboarding.step3.h1" = "Assign gifts to one friend or keep them unassigned";
-"onboarding.step3.h2" = "Filter open/completed ideas and keep a clean overview";
-"onboarding.step4.title" = "Make It Yours";
-"onboarding.step4.message" = "Tune reminders and app behavior in Settings whenever you want.";
-"onboarding.step4.h1" = "Control reminder categories and reminder time";
-"onboarding.step4.h2" = "Use tags to keep your friend list easy to scan";
 "privacy.notifications.title" = "Notifications";
 "privacy.notifications.body" = "If enabled, Friend Notes uses local iOS notifications. Scheduling happens locally on the device.";
 "privacy.sharing.title" = "Data Sharing";

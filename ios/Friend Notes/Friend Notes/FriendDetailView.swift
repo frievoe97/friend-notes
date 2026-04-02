@@ -17,6 +17,9 @@ struct FriendDetailView: View {
     @State private var showingQuickAddEvent = false
     @State private var showingQuickAddGiftIdea = false
     @State private var isContactEditing = false
+    @State private var firstNameDraft = ""
+    @State private var lastNameDraft = ""
+    @State private var nicknameDraft = ""
     @FocusState private var focusedField: Field?
 
     /// Focus targets for keyboard navigation in editable name fields.
@@ -79,6 +82,14 @@ struct FriendDetailView: View {
     /// Count of not-yet-gifted ideas linked to this friend.
     private var openGiftIdeasCount: Int {
         friend.giftIdeas.filter { !$0.isGifted }.count
+    }
+
+    /// `true` when the current name draft can be committed.
+    private var canCommitNameDraft: Bool {
+        let first = firstNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let last = lastNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nickname = nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !first.isEmpty || !last.isEmpty || !nickname.isEmpty
     }
 
     var body: some View {
@@ -212,15 +223,15 @@ struct FriendDetailView: View {
                             icon: "note.text", count: friend.entryList(for: "notes").count)
             }
             .buttonStyle(.plain)
-            NavigationLink {
-                FriendMeetingsView(friend: friend)
-            } label: {
-                categoryRow(
-                    title: L10n.text("friend.section.history", "Meetings/Events"),
-                    icon: "clock.arrow.circlepath",
-                    count: upcomingMeetingsCount
-                )
-            }
+                NavigationLink {
+                    FriendMeetingsView(friend: friend)
+                } label: {
+                    categoryRow(
+                        title: L10n.text("friend.section.history", "Meetings / Events"),
+                        icon: "clock.arrow.circlepath",
+                        count: upcomingMeetingsCount
+                    )
+                }
             .buttonStyle(.plain)
 
             NavigationLink {
@@ -234,7 +245,7 @@ struct FriendDetailView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 12)
     }
 
     private func categoryRow(title: String, icon: String, count: Int) -> some View {
@@ -345,21 +356,29 @@ struct FriendDetailView: View {
         // MARK: - Primary Action (separate right button)
         ToolbarItem(placement: .primaryAction) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isContactEditing.toggle()
-                    if !isContactEditing {
-                        focusedField = nil
-                    }
+                if isContactEditing {
+                    commitContactDraft()
+                } else {
+                    startContactEditing()
                 }
             } label: {
-                Image(systemName: isContactEditing ? "checkmark" : "square.and.pencil")
+                Image(systemName: isContactEditing ? "checkmark" : "pencil")
                     .font(.body.weight(.semibold))
+                    .frame(width: 18, height: 18, alignment: .center)
             }
+            .disabled(isContactEditing && !canCommitNameDraft)
             .accessibilityLabel(
                 isContactEditing
                     ? L10n.text("common.done", "Done")
                     : L10n.text("common.edit", "Edit")
             )
+        }
+        ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button(L10n.text("common.done", "Done")) {
+                focusedField = nil
+                Keyboard.dismiss()
+            }
         }
     }   
 
@@ -376,60 +395,154 @@ struct FriendDetailView: View {
 
     /// Header area containing avatar, editable name fields, and nickname.
     private var header: some View {
-        let primaryName = friend.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let primaryName: String = {
+            if isContactEditing {
+                return [firstNameDraft, lastNameDraft]
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+            }
+            return friend.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        }()
+        let avatarName: String = {
+            if isContactEditing {
+                let nickname = nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !nickname.isEmpty { return nickname }
+                if !primaryName.isEmpty { return primaryName }
+            }
+            return primaryName.isEmpty ? friend.displayName : primaryName
+        }()
 
         return VStack(spacing: 12) {
-            AvatarView(name: primaryName.isEmpty ? friend.displayName : primaryName, size: 88)
+            AvatarView(name: avatarName, size: 88)
                 .padding(.top, 16)
 
             if isContactEditing {
-                VStack(spacing: 8) {
-                    TextField(
-                        L10n.text("friend.first_name", "First Name"),
-                        text: $friend.firstName
-                    )
-                    .textInputAutocapitalization(.words)
-                    .multilineTextAlignment(.center)
-                    .font(.title2.weight(.semibold))
-                    .focused($focusedField, equals: .firstName)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .lastName }
+                let canClearFirstName = !firstNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let canClearLastName = !lastNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let canClearNickname = !nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        inputFieldLabel(L10n.text("friend.first_name", "First Name"))
+                        HStack(spacing: 8) {
+                            TextField("", text: $firstNameDraft)
+                                .textFieldStyle(.plain)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled(true)
+                                .font(.title3.weight(.semibold))
+                                .focused($focusedField, equals: .firstName)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .lastName }
 
-                    TextField(
-                        L10n.text("friend.last_name", "Last Name"),
-                        text: $friend.lastName
-                    )
-                    .textInputAutocapitalization(.words)
-                    .multilineTextAlignment(.center)
-                    .font(.title2.weight(.semibold))
-                    .focused($focusedField, equals: .lastName)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .nickname }
+                            Button {
+                                firstNameDraft = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearFirstName ? 1 : 0)
+                            .disabled(!canClearFirstName)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
 
-                    TextField(
-                        L10n.text("friend.nickname", "Nickname"),
-                        text: $friend.nickname
-                    )
-                    .multilineTextAlignment(.center)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .focused($focusedField, equals: .nickname)
-                    .submitLabel(.done)
-                    .onSubmit { focusedField = nil }
+                    VStack(alignment: .leading, spacing: 6) {
+                        inputFieldLabel(L10n.text("friend.last_name", "Last Name"))
+                        HStack(spacing: 8) {
+                            TextField("", text: $lastNameDraft)
+                                .textFieldStyle(.plain)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled(true)
+                                .font(.title3.weight(.semibold))
+                                .focused($focusedField, equals: .lastName)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .nickname }
+
+                            Button {
+                                lastNameDraft = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearLastName ? 1 : 0)
+                            .disabled(!canClearLastName)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        inputFieldLabel(L10n.text("friend.nickname", "Nickname"))
+                        HStack(spacing: 8) {
+                            TextField("", text: $nicknameDraft)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled(true)
+                                .font(.title3.weight(.semibold))
+                                .textInputAutocapitalization(.words)
+                                .focused($focusedField, equals: .nickname)
+                                .submitLabel(.done)
+                                .onSubmit { focusedField = nil }
+
+                            Button {
+                                nicknameDraft = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearNickname ? 1 : 0)
+                            .disabled(!canClearNickname)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
+                    if !canCommitNameDraft {
+                        Text(L10n.text("friend.name_required", "Name or nickname required."))
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.danger)
+                            .padding(.top, 2)
+                    }
                 }
-                .padding(.horizontal, 32)
-
+                .padding(.horizontal, 24)
             } else {
-                VStack(spacing: 4) {
-                    Text(primaryName.isEmpty ? friend.displayName : primaryName)
-                        .font(.title2.weight(.semibold))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
+                let trimmedNickname = friend.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedFullName = friend.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                    if !friend.nickname.trimmingCharacters(in: .whitespaces).isEmpty {
-                        Text(friend.nickname)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                VStack(spacing: 4) {
+                    if trimmedNickname.isEmpty {
+                        Text(trimmedFullName.isEmpty ? friend.displayName : trimmedFullName)
+                            .font(.title2.weight(.semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    } else {
+                        Text(trimmedNickname)
+                            .font(.title2.weight(.semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+
+                        if !trimmedFullName.isEmpty {
+                            Text(trimmedFullName)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                        }
                     }
                 }
                 .padding(.horizontal, 32)
@@ -569,6 +682,13 @@ struct FriendDetailView: View {
             .padding(.horizontal, 24)
     }
 
+    /// Label style used above editable text inputs.
+    private func inputFieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+    }
+
     /// Adds or removes a tag from the friend and keeps selected tags sorted.
     ///
     /// - Parameter tag: Tag to toggle.
@@ -609,6 +729,32 @@ struct FriendDetailView: View {
         friend.giftIdeas.append(idea)
     }
 
+    /// Starts editing by copying persisted values into local name drafts.
+    private func startContactEditing() {
+        firstNameDraft = friend.firstName
+        lastNameDraft = friend.lastName
+        nicknameDraft = friend.nickname
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isContactEditing = true
+        }
+    }
+
+    /// Commits local name drafts to the persisted friend record when valid.
+    private func commitContactDraft() {
+        guard canCommitNameDraft else { return }
+
+        friend.firstName = firstNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        friend.lastName = lastNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        friend.nickname = nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        focusedField = nil
+        Keyboard.dismiss()
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isContactEditing = false
+        }
+    }
+
 }
 
 
@@ -620,23 +766,8 @@ struct AddFriendView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(AppTagStore.key) private var definedTagsRaw = "[]"
 
-    @State private var firstName = ""
-    @State private var lastName = ""
-    @State private var nickname = ""
-    @State private var tags: [String] = []
-    @State private var hobbies: [String] = []
-    @State private var foods: [String] = []
-    @State private var musics: [String] = []
-    @State private var moviesSeries: [String] = []
-    @State private var notes: [String] = []
-    @State private var isHobbiesExpanded = false
-    @State private var isFoodExpanded = false
-    @State private var isMusicExpanded = false
-    @State private var isMoviesExpanded = false
-    @State private var isNotesExpanded = false
-    @State private var birthday: Date? = nil
+    @State private var draftFriend: Friend?
     @State private var showingBirthdayPicker = false
-
     @FocusState private var focusedField: Field?
 
     /// Focus targets for keyboard navigation while creating a friend.
@@ -649,16 +780,63 @@ struct AddFriendView: View {
         AppTagStore.decode(definedTagsRaw)
     }
 
+    private var firstNameBinding: Binding<String> {
+        Binding(
+            get: { draftFriend?.firstName ?? "" },
+            set: { draftFriend?.firstName = $0 }
+        )
+    }
+
+    private var lastNameBinding: Binding<String> {
+        Binding(
+            get: { draftFriend?.lastName ?? "" },
+            set: { draftFriend?.lastName = $0 }
+        )
+    }
+
+    private var nicknameBinding: Binding<String> {
+        Binding(
+            get: { draftFriend?.nickname ?? "" },
+            set: { draftFriend?.nickname = $0 }
+        )
+    }
+
     /// Name preview used by the avatar while typing.
     ///
     /// - Returns: Nickname when available, otherwise first+last name.
     private var displayNameForAvatar: String {
-        let nick = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nick = (draftFriend?.nickname ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !nick.isEmpty { return nick }
-        return [firstName, lastName]
+        return [(draftFriend?.firstName ?? ""), (draftFriend?.lastName ?? "")]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    /// Inline navigation title that mirrors typed nickname/name.
+    private var navigationTitleText: String {
+        let trimmed = displayNameForAvatar.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.text("friend.new.title", "New Friend") : trimmed
+    }
+
+    /// Enables save once a non-empty first or last name exists.
+    private var canSave: Bool {
+        let first = (draftFriend?.firstName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let last = (draftFriend?.lastName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return !first.isEmpty || !last.isEmpty
+    }
+
+    /// Count of upcoming meetings/events linked to the current draft friend.
+    private var upcomingMeetingsCount: Int {
+        guard let draftFriend else { return 0 }
+        let now = Date()
+        return draftFriend.meetings.filter { $0.startDate > now }.count
+    }
+
+    /// Count of not-yet-gifted ideas linked to the current draft friend.
+    private var openGiftIdeasCount: Int {
+        guard let draftFriend else { return 0 }
+        return draftFriend.giftIdeas.filter { !$0.isGifted }.count
     }
 
     var body: some View {
@@ -669,45 +847,34 @@ struct AddFriendView: View {
                     Divider().padding(.horizontal, 24)
                     birthdaySection
                     tagsSection
-                    collapsibleListEditorSection(title: L10n.text("friend.section.hobbies", "Hobbies"), icon: "figure.walk", items: $hobbies, placeholder: L10n.text("friend.placeholder.add_hobby", "Add hobby…"), isExpanded: $isHobbiesExpanded)
-                    collapsibleListEditorSection(title: L10n.text("friend.section.food", "Food"), icon: "fork.knife", items: $foods, placeholder: L10n.text("friend.placeholder.add_food", "Add food…"), isExpanded: $isFoodExpanded)
-                    collapsibleListEditorSection(title: L10n.text("friend.section.music", "Music"), icon: "music.note", items: $musics, placeholder: L10n.text("friend.placeholder.add_music", "Add music…"), isExpanded: $isMusicExpanded)
-                    collapsibleListEditorSection(title: L10n.text("friend.section.movies_series", "Movies / Series"), icon: "film.fill", items: $moviesSeries, placeholder: L10n.text("friend.placeholder.add_movie_series", "Add movie or series…"), isExpanded: $isMoviesExpanded)
-                    collapsibleListEditorSection(title: L10n.text("friend.section.notes", "Notes"), icon: "note.text", items: $notes, placeholder: L10n.text("friend.placeholder.add_note", "Add note…"), isExpanded: $isNotesExpanded)
+                    categoriesSection
                 }
                 .padding(.bottom, 40)
             }
             .scrollContentBackground(.hidden)
             .background(Color.clear)
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(L10n.text("friend.new.title", "New Friend"))
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
+            .interactiveDismissDisabled()
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    Button("Cancel") { cancelCreation() }
                 }
+                
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { save() } label: {
-                        Image(systemName: "plus")
-                            .font(.body.weight(.semibold))
-                    }
-                        .accessibilityLabel(L10n.text("common.add", "Add"))
-                        .disabled(firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                  && lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("Save") { save() }
+                        .fontWeight(.semibold)
+                        .disabled(!canSave)
                 }
-            }
-            .sheet(isPresented: $showingBirthdayPicker) {
-                BirthdayPickerSheet(
-                    title: L10n.text("friend.section.birthday", "Birthday"),
-                    initialDate: birthday ?? Date(),
-                    onSave: { selectedDate in
-                        birthday = selectedDate
+                
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        focusedField = nil
+                        Keyboard.dismiss()
                     }
-                )
-            }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    focusedField = .firstName
                 }
             }
         }
@@ -721,39 +888,53 @@ struct AddFriendView: View {
                 .animation(.spring(response: 0.4), value: displayNameForAvatar)
                 .padding(.top, 16)
 
-            VStack(spacing: 8) {
-                TextField(
-                    "",
-                    text: $firstName,
-                    prompt: focusedField == .firstName ? nil : Text(L10n.text("friend.first_name", "First Name"))
-                )
-                    .font(.title3.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .textInputAutocapitalization(.words)
-                    .focused($focusedField, equals: .firstName)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .lastName }
-                TextField(
-                    "",
-                    text: $lastName,
-                    prompt: focusedField == .lastName ? nil : Text(L10n.text("friend.last_name", "Last Name"))
-                )
-                    .font(.title3.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .textInputAutocapitalization(.words)
-                    .focused($focusedField, equals: .lastName)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .nickname }
-            }
-            .padding(.horizontal, 32)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    inputFieldLabel(L10n.text("friend.first_name", "First Name"))
+                    TextField("", text: firstNameBinding)
+                        .textFieldStyle(.plain)
+                        .font(.title3.weight(.semibold))
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled(true)
+                        .focused($focusedField, equals: .firstName)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .lastName }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
 
-            TextField(L10n.text("friend.nickname", "Nickname"), text: $nickname)
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .focused($focusedField, equals: .nickname)
-                .submitLabel(.done)
-                .onSubmit { focusedField = nil }
-                .padding(.horizontal, 24)
+                VStack(alignment: .leading, spacing: 6) {
+                    inputFieldLabel(L10n.text("friend.last_name", "Last Name"))
+                    TextField("", text: lastNameBinding)
+                        .textFieldStyle(.plain)
+                        .font(.title3.weight(.semibold))
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled(true)
+                        .focused($focusedField, equals: .lastName)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .nickname }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    inputFieldLabel(L10n.text("friend.nickname", "Nickname"))
+                    TextField("", text: nicknameBinding)
+                        .textFieldStyle(.plain)
+                        .font(.title3.weight(.semibold))
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled(true)
+                        .focused($focusedField, equals: .nickname)
+                        .submitLabel(.done)
+                        .onSubmit { focusedField = nil }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+            .padding(.horizontal, 24)
         }
     }
 
@@ -762,16 +943,16 @@ struct AddFriendView: View {
         VStack(alignment: .leading, spacing: 14) {
             sectionLabel(L10n.text("friend.section.birthday", "Birthday"), icon: "birthday.cake.fill")
             HStack {
-                if birthday != nil {
+                if draftFriend?.birthday != nil {
                     Button {
                         showingBirthdayPicker = true
                     } label: {
-                        Text((birthday ?? Date()).formatted(date: .long, time: .omitted))
+                        Text((draftFriend?.birthday ?? Date()).formatted(date: .long, time: .omitted))
                             .font(.body)
                             .foregroundStyle(.primary)
                     }
                     Spacer()
-                    Button { birthday = nil } label: {
+                    Button { draftFriend?.birthday = nil } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
                             .font(.title3)
@@ -799,11 +980,12 @@ struct AddFriendView: View {
                 Text(L10n.text("friend.tags.empty_hint", "Define tags first in Settings."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 24)
             } else {
                 FlowLayout(spacing: 8) {
                     ForEach(definedTags, id: \.self) { tag in
-                        let isSelected = tags.contains(tag)
+                        let isSelected = draftFriend?.tags.contains(tag) ?? false
                         Button {
                             withAnimation(.spring(response: 0.3)) {
                                 toggleTag(tag)
@@ -831,90 +1013,135 @@ struct AddFriendView: View {
         }
     }
 
-    /// Wraps the reusable list editor in a titled section block.
-    ///
-    /// - Parameters:
-    ///   - title: Section title.
-    ///   - icon: SF Symbol name.
-    ///   - items: Bound editable list.
-    ///   - placeholder: Add-field placeholder text.
-    ///   - isExpanded: Expansion binding for the disclosure state.
-    /// - Returns: A collapsible section containing `StringListEditor`.
-    private func collapsibleListEditorSection(
-        title: String,
-        icon: String,
-        items: Binding<[String]>,
-        placeholder: String,
-        isExpanded: Binding<Bool>
-    ) -> some View {
-        let collapseAnimation = Animation.spring(response: 0.34, dampingFraction: 0.9, blendDuration: 0.15)
-        return VStack(alignment: .leading, spacing: 10) {
-            Button {
-                withAnimation(collapseAnimation) {
-                    isExpanded.wrappedValue.toggle()
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Label(title, systemImage: icon)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text("\(items.wrappedValue.count)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(isExpanded.wrappedValue ? 90 : 0))
-                        .frame(width: 12)
-                }
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 24)
-
-            if isExpanded.wrappedValue {
-                StringListEditor(placeholder: placeholder, items: items)
-                    .padding(.horizontal, 24)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .offset(y: -8)),
-                        removal: .opacity
-                    ))
-            }
+    /// Navigation rows matching the same category structure used in friend detail.
+    private var categoriesSection: some View {
+        guard let draftFriend else {
+            return AnyView(EmptyView())
         }
-        .animation(collapseAnimation, value: isExpanded.wrappedValue)
+
+        return AnyView(
+            VStack(spacing: 0) {
+                NavigationLink {
+                    FriendEntryListView(
+                        friend: draftFriend,
+                        title: L10n.text("friend.section.hobbies", "Hobbies"),
+                        icon: "figure.walk",
+                        category: "hobbies",
+                        addPlaceholder: L10n.text("friend.placeholder.add_hobby", "Add hobby…")
+                    )
+                } label: {
+                    categoryRow(title: L10n.text("friend.section.hobbies", "Hobbies"),
+                                icon: "figure.walk", count: draftFriend.entryList(for: "hobbies").count)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendEntryListView(
+                        friend: draftFriend,
+                        title: L10n.text("friend.section.food", "Food"),
+                        icon: "fork.knife",
+                        category: "foods",
+                        addPlaceholder: L10n.text("friend.placeholder.add_food", "Add food…")
+                    )
+                } label: {
+                    categoryRow(title: L10n.text("friend.section.food", "Food"),
+                                icon: "fork.knife", count: draftFriend.entryList(for: "foods").count)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendEntryListView(
+                        friend: draftFriend,
+                        title: L10n.text("friend.section.music", "Music"),
+                        icon: "music.note",
+                        category: "musics",
+                        addPlaceholder: L10n.text("friend.placeholder.add_music", "Add music…")
+                    )
+                } label: {
+                    categoryRow(title: L10n.text("friend.section.music", "Music"),
+                                icon: "music.note", count: draftFriend.entryList(for: "musics").count)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendEntryListView(
+                        friend: draftFriend,
+                        title: L10n.text("friend.section.movies_series", "Movies / Series"),
+                        icon: "film.fill",
+                        category: "moviesSeries",
+                        addPlaceholder: L10n.text("friend.placeholder.add_movie_series", "Add movie or series…")
+                    )
+                } label: {
+                    categoryRow(title: L10n.text("friend.section.movies_series", "Movies / Series"),
+                                icon: "film.fill", count: draftFriend.entryList(for: "moviesSeries").count)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendEntryListView(
+                        friend: draftFriend,
+                        title: L10n.text("friend.section.notes", "Notes"),
+                        icon: "note.text",
+                        category: "notes",
+                        addPlaceholder: L10n.text("friend.placeholder.add_note", "Add note…")
+                    )
+                } label: {
+                    categoryRow(title: L10n.text("friend.section.notes", "Notes"),
+                                icon: "note.text", count: draftFriend.entryList(for: "notes").count)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendMeetingsView(friend: draftFriend)
+                } label: {
+                    categoryRow(
+                        title: L10n.text("friend.section.history", "Meetings / Events"),
+                        icon: "clock.arrow.circlepath",
+                        count: upcomingMeetingsCount
+                    )
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendGiftsView(friend: draftFriend)
+                } label: {
+                    categoryRow(
+                        title: L10n.text("friend.section.gift_ideas", "Gift Ideas"),
+                        icon: "gift.fill",
+                        count: openGiftIdeasCount
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 24)
+        )
     }
 
-    /// Wraps the reusable list editor in a titled section block.
-    ///
-    /// - Parameters:
-    ///   - title: Section title.
-    ///   - icon: SF Symbol name.
-    ///   - items: Bound editable list.
-    ///   - placeholder: Add-field placeholder text.
-    /// - Returns: A section containing `StringListEditor`.
-    private func listEditorSection(
-        title: String,
-        icon: String,
-        items: Binding<[String]>,
-        placeholder: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel(title, icon: icon)
-            StringListEditor(placeholder: placeholder, items: items)
-                .padding(.horizontal, 24)
+    private func categoryRow(title: String, icon: String, count: Int) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+            Spacer()
+            if count > 0 {
+                Text("\(count)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
+        .padding(.horizontal, 0)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 
     /// Builds a standardized small section label with icon.
-    ///
-    /// - Parameters:
-    ///   - title: Label text.
-    ///   - icon: SF Symbol name.
-    /// - Returns: Styled label view.
     private func sectionLabel(_ title: String, icon: String) -> some View {
         Label(title, systemImage: icon)
             .font(.subheadline.weight(.semibold))
@@ -922,52 +1149,74 @@ struct AddFriendView: View {
             .padding(.horizontal, 24)
     }
 
+    /// Label style used above editable text inputs.
+    private func inputFieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+    }
+
     /// Adds or removes a tag in the local creation draft.
     ///
     /// - Parameter tag: Tag to toggle.
     private func toggleTag(_ tag: String) {
-        if tags.contains(tag) {
-            tags.removeAll { $0 == tag }
+        guard let draftFriend else { return }
+        if draftFriend.tags.contains(tag) {
+            draftFriend.tags.removeAll { $0 == tag }
         } else {
-            tags.append(tag)
-            tags.sort { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            draftFriend.tags.append(tag)
+            draftFriend.tags.sort { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
         }
     }
 
-    /// Validates and persists a new friend into the model context.
-    ///
-    /// - Note: Empty first+last name input is ignored and will not create a record.
+    /// Creates an empty draft friend once so linked sub-pages can behave exactly like existing profiles.
+    private func initializeDraftFriendIfNeeded() {
+        guard draftFriend == nil else { return }
+        let friend = Friend()
+        modelContext.insert(friend)
+        draftFriend = friend
+    }
+
+    /// Cancels creation and removes any draft data including linked records.
+    private func cancelCreation() {
+        deleteDraftFriendIfNeeded()
+        dismiss()
+    }
+
+    /// Persists the current draft friend and keeps all linked entries/meetings/gifts.
     private func save() {
-        let trimmedFirstName = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedLastName = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let draftFriend else { return }
+        let trimmedFirstName = draftFriend.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedLastName = draftFriend.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedFirstName.isEmpty || !trimmedLastName.isEmpty else { return }
 
-        let friend = Friend(
-            firstName: trimmedFirstName,
-            lastName: trimmedLastName,
-            nickname: nickname.trimmingCharacters(in: .whitespacesAndNewlines),
-            tags: tags,
-            birthday: birthday
-        )
-        modelContext.insert(friend)
+        draftFriend.firstName = trimmedFirstName
+        draftFriend.lastName = trimmedLastName
+        draftFriend.nickname = draftFriend.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        draftFriend.tags.sort { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
 
-        let categoryEntries: [(String, [String])] = [
-            ("hobbies", hobbies),
-            ("foods", foods),
-            ("musics", musics),
-            ("moviesSeries", moviesSeries),
-            ("notes", notes)
-        ]
-        for (cat, items) in categoryEntries {
-            for (i, item) in items.enumerated() {
-                let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { continue }
-                let entry = FriendEntry(title: trimmed, category: cat, order: i)
-                modelContext.insert(entry)
-                friend.entries.append(entry)
-            }
+        focusedField = nil
+        Keyboard.dismiss()
+
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            assertionFailure("Could not save friend draft: \(error)")
         }
-        dismiss()
+    }
+
+    /// Deletes the draft friend and prunes orphaned meetings created during draft editing.
+    private func deleteDraftFriendIfNeeded() {
+        guard let draftFriend else { return }
+        DataMaintenance.pruneMeetingsAfterRemoving(friend: draftFriend, in: modelContext)
+        modelContext.delete(draftFriend)
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Could not delete friend draft: \(error)")
+        }
+        self.draftFriend = nil
     }
 }
 
@@ -1046,28 +1295,86 @@ struct EditGiftIdeaSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                let canClearTitle = !idea.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let canClearNote = !idea.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let canClearURL = !idea.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField(L10n.text("gift.name", "Name"), text: $idea.title)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("gift.name", "Name"))
+                        HStack(spacing: 8) {
+                            TextField("", text: $idea.title)
+                                .textFieldStyle(.plain)
 
-                    TextField(L10n.text("gift.note", "Note"), text: $idea.note, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(4...)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Button {
+                                idea.title = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearTitle ? 1 : 0)
+                            .disabled(!canClearTitle)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
 
-                    TextField(L10n.text("gift.url", "URL"), text: $idea.url)
-                        .textFieldStyle(.plain)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("gift.note", "Note"))
+                        HStack(alignment: .top, spacing: 8) {
+                            TextField("", text: $idea.note, axis: .vertical)
+                                .textFieldStyle(.plain)
+                                .lineLimit(4...)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Button {
+                                idea.note = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearNote ? 1 : 0)
+                            .disabled(!canClearNote)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("gift.url", "URL"))
+                        HStack(spacing: 8) {
+                            TextField("", text: $idea.url)
+                                .textFieldStyle(.plain)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .keyboardType(.URL)
+
+                            Button {
+                                idea.url = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.text("common.clear", "Clear"))
+                            .opacity(canClearURL ? 1 : 0)
+                            .disabled(!canClearURL)
+                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
 
                     Toggle(L10n.text("gift.already_gifted", "Already gifted"), isOn: $idea.isGifted)
                         .padding(.horizontal, 14)
@@ -1088,6 +1395,12 @@ struct EditGiftIdeaSheet: View {
             }
         }
         .appScreenBackground()
+    }
+
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -1113,34 +1426,43 @@ struct AddGiftIdeaSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField(L10n.text("gift.name", "Name"), text: $title)
-                        .textFieldStyle(.plain)
-                        .focused($focusedField, equals: .title)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .url }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("gift.name", "Name"))
+                        TextField("", text: $title)
+                            .textFieldStyle(.plain)
+                            .focused($focusedField, equals: .title)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .url }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
 
-                    TextField(L10n.text("gift.url", "URL"), text: $url)
-                        .textFieldStyle(.plain)
-                        .focused($focusedField, equals: .url)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .note }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("gift.url", "URL"))
+                        TextField("", text: $url)
+                            .textFieldStyle(.plain)
+                            .focused($focusedField, equals: .url)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.URL)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .note }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
 
-                    TextField(L10n.text("gift.note", "Note"), text: $note, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(4...)
-                        .focused($focusedField, equals: .note)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel(L10n.text("gift.note", "Note"))
+                        TextField("", text: $note, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(4...)
+                            .focused($focusedField, equals: .note)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -1171,5 +1493,11 @@ struct AddGiftIdeaSheet: View {
             }
         }
         .appScreenBackground()
+    }
+
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
     }
 }

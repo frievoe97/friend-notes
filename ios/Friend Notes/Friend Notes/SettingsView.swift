@@ -137,7 +137,8 @@ struct AppSettingsView: View {
             if notificationsEnabled {
                 HStack {
                     Text(L10n.text("settings.reminder.time", "Reminder time"))
-                        .foregroundStyle(.secondary)
+                        .font(.body)
+                        .foregroundStyle(.primary)
                     Spacer()
                     DatePicker(
                         L10n.text("settings.reminder.time", "Reminder time"),
@@ -147,7 +148,6 @@ struct AppSettingsView: View {
                     .labelsHidden()
                     .datePickerStyle(.compact)
                 }
-                .font(.subheadline)
 
                 reminderRow(
                     title: L10n.text("settings.reminder.birthdays", "Birthdays"),
@@ -254,23 +254,29 @@ struct AppSettingsView: View {
 
     /// Input row for adding new globally reusable tags.
     private var addTagInput: some View {
-        HStack(spacing: 10) {
-            TextField(L10n.text("settings.tags.add_placeholder", "Add tag"), text: $newTag)
-                .textFieldStyle(.plain)
-                .focused($focusedField, equals: .newTag)
-                .submitLabel(.done)
-                .onSubmit(addTag)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.text("settings.tags.add_placeholder", "Add tag"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
 
-            let canAdd = !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            Button(action: addTag) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.accent.opacity(0.35))
-                    .frame(width: 24, height: 24)
+            HStack(spacing: 10) {
+                TextField("", text: $newTag)
+                    .textFieldStyle(.plain)
+                    .focused($focusedField, equals: .newTag)
+                    .submitLabel(.done)
+                    .onSubmit(addTag)
+
+                let canAdd = !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                Button(action: addTag) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.accent.opacity(0.35))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .disabled(!canAdd)
+                .accessibilityLabel(L10n.text("common.add", "Add"))
             }
-            .buttonStyle(.plain)
-            .disabled(!canAdd)
-            .accessibilityLabel(L10n.text("common.add", "Add"))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)

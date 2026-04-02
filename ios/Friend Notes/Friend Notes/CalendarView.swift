@@ -401,6 +401,7 @@ struct CalendarView: View {
     /// - Returns: Timeline items sorted by date ascending.
     private func timelineEvents() -> [UpcomingEventItem] {
         let now = Date()
+        let startOfToday = cal.startOfDay(for: now)
         var result: [UpcomingEventItem] = []
 
         if showBirthdaysOnCalendar {
@@ -416,7 +417,7 @@ struct CalendarView: View {
                 guard let thisYearBirthday else { continue }
 
                 let nextBirthday: Date
-                if thisYearBirthday >= now {
+                if thisYearBirthday >= startOfToday {
                     nextBirthday = thisYearBirthday
                 } else {
                     nextBirthday = cal.date(from: DateComponents(
@@ -427,7 +428,7 @@ struct CalendarView: View {
             }
         }
 
-        for meeting in meetings where meeting.startDate >= now {
+        for meeting in meetings where meeting.startDate >= startOfToday {
             result.append(.init(
                 date: meeting.startDate,
                 kind: .entry(meeting),

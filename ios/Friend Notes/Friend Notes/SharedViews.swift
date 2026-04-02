@@ -1,11 +1,30 @@
 import SwiftUI
 import UIKit
+import SafariServices
 
 /// Utility for forcing first-responder resignation when focus state alone is insufficient.
 enum Keyboard {
     /// Attempts to dismiss the currently active keyboard responder.
     static func dismiss() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+
+// MARK: - In-App Browser
+
+/// Lightweight Safari sheet wrapper for opening links without leaving the app.
+struct InAppBrowserView: UIViewControllerRepresentable {
+    /// URL to open inside the embedded browser.
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let controller = SFSafariViewController(url: url)
+        controller.dismissButtonStyle = .close
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {
+        // No-op: SFSafariViewController is configured on creation.
     }
 }
 
@@ -259,24 +278,30 @@ struct StringListEditor: View {
     }
 
     private var addItemRow: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "plus.circle.fill")
-                .font(.title3)
-                .foregroundStyle(AppTheme.accent)
-            TextField(placeholder, text: $newItem, axis: .vertical)
-                .font(.body)
-                .lineLimit(1...4)
-                .focused($isAddFieldFocused)
-                .onSubmit(addItem)
-            Button(action: addItem) {
-                Image(systemName: "plus")
-                    .font(.caption.weight(.semibold))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(placeholder)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.accent)
+                TextField("", text: $newItem, axis: .vertical)
+                    .font(.body)
+                    .lineLimit(1...4)
+                    .focused($isAddFieldFocused)
+                    .onSubmit(addItem)
+                Button(action: addItem) {
+                    Image(systemName: "plus")
+                        .font(.caption.weight(.semibold))
+                }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .opacity(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
+                    .disabled(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityLabel(L10n.text("common.add", "Add"))
             }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .opacity(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
-                .disabled(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel(L10n.text("common.add", "Add"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -299,11 +324,16 @@ struct StringListEditor: View {
     @ViewBuilder
     private func itemTextView(index: Int, item: String) -> some View {
         if editIndex == index {
-            TextField(L10n.text("list.edit_entry", "Edit entry"), text: $editValue, axis: .vertical)
-                .font(.body)
-                .lineLimit(2...6)
-                .focused($focusedEditField, equals: index)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.text("list.edit_entry", "Edit entry"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                TextField("", text: $editValue, axis: .vertical)
+                    .font(.body)
+                    .lineLimit(2...6)
+                    .focused($focusedEditField, equals: index)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         } else {
             Text(softWrapped(item))
                 .font(.body)
