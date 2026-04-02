@@ -140,6 +140,7 @@ struct TagChip: View {
                 Image(systemName: "xmark")
                     .font(.caption2.weight(.bold))
             }
+            .buttonStyle(.borderless)
         }
         .padding(.leading, 10)
         .padding(.trailing, 7)
@@ -267,11 +268,15 @@ struct StringListEditor: View {
                 .lineLimit(1...4)
                 .focused($isAddFieldFocused)
                 .onSubmit(addItem)
-            Button(L10n.text("common.add", "Add"), action: addItem)
+            Button(action: addItem) {
+                Image(systemName: "plus")
+                    .font(.caption.weight(.semibold))
+            }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 .opacity(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
                 .disabled(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel(L10n.text("common.add", "Add"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

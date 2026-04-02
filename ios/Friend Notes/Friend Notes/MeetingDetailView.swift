@@ -96,13 +96,22 @@ struct MeetingDetailView: View {
 
     /// Main scroll container for the detail sections.
     private var scrollBody: some View {
-        ScrollView {
-            detailSections
-                .padding(.bottom, 40)
+        ScrollViewReader { proxy in
+            ScrollView {
+                detailSections
+                    .padding(.bottom, 40)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: isEditing && focusedField == .note ? 124 : 0)
+            }
+            .onChange(of: focusedField) { _, newValue in
+                guard newValue == .note else { return }
+                scrollToNoteSection(proxy: proxy)
+            }
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
-        .scrollDismissesKeyboard(.interactively)
     }
 
     /// Vertical stack holding title/date/friends/note/delete sections.
@@ -297,39 +306,30 @@ struct MeetingDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             sectionLabel(L10n.text("meeting.section.note", "Note"), icon: "note.text")
             if isEditing {
-                ZStack(alignment: .topLeading) {
-                    if meetingNoteDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(L10n.text("meeting.note.placeholder", "Add a note…"))
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                    }
+                NoteEditorCard(
+                    text: $meetingNoteDraft,
+                    placeholder: L10n.text("meeting.note.placeholder", "Add a note…"),
+                    minHeight: 132
+                ) {
                     TextEditor(text: $meetingNoteDraft)
                         .font(.body)
                         .focused($focusedField, equals: .note)
-                        .frame(minHeight: 120, alignment: .topLeading)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .scrollContentBackground(.hidden)
+                        .textInputAutocapitalization(.sentences)
                 }
-                .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .padding(.horizontal, 24)
                 .onChange(of: meetingNoteDraft) { _, newValue in
                     meeting.note = newValue
                 }
             } else {
-                Text(meeting.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                     ? L10n.text("meeting.note.empty", "No note yet.")
-                     : meeting.note)
-                    .font(.body)
-                    .foregroundStyle(meeting.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
+                NoteReadCard(
+                    text: meeting.note,
+                    emptyText: L10n.text("meeting.note.empty", "No note yet."),
+                    minHeight: 120
+                )
                     .padding(.horizontal, 24)
             }
         }
+        .id(noteSectionScrollID)
     }
 
     /// Destructive action shown only in edit mode.
@@ -439,9 +439,8 @@ struct MeetingDetailView: View {
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
-                Text(L10n.text("common.add", "Add"))
-                    .font(.caption2)
-                    .lineLimit(1)
+                Image(systemName: "plus")
+                    .font(.caption.weight(.semibold))
                     .frame(width: 64)
                     .foregroundStyle(.secondary)
             }
@@ -455,6 +454,20 @@ struct MeetingDetailView: View {
     private func normalizeEventDates() {
         if meeting.kind == .event {
             meeting.endDate = meeting.startDate
+        }
+    }
+
+    /// Stable scroll anchor ID used to keep the focused note visible above the keyboard.
+    private var noteSectionScrollID: String {
+        "meeting-detail-note-section"
+    }
+
+    /// Scrolls to the notes section after focus changes.
+    private func scrollToNoteSection(proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                proxy.scrollTo(noteSectionScrollID, anchor: .bottom)
+            }
         }
     }
 }
@@ -657,41 +670,49 @@ struct AddMeetingView: View {
     @FocusState private var focusedNote: Bool
 
     /// Initializes meeting creation state.
-    init(initialDate: Date = Date()) {
+    init(initialDate: Date = Date(), preselectedFriends: [Friend] = []) {
         let rounded = FiveMinuteDateTimePicker.roundedToFiveMinutes(initialDate)
         self.initialDate = rounded
         _startDate = State(initialValue: rounded)
         _endDate = State(initialValue: rounded.addingTimeInterval(60 * 60))
+        _selectedFriends = State(initialValue: Self.uniqueFriends(preselectedFriends))
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 28) {
-                    dateSection
-                    Divider().padding(.horizontal, 24)
-                    friendsSection
-                    Divider().padding(.horizontal, 24)
-                    noteSection
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 28) {
+                        dateSection
+                        Divider().padding(.horizontal, 24)
+                        friendsSection
+                        Divider().padding(.horizontal, 24)
+                        noteSection
+                    }
+                    .padding(.bottom, 40)
                 }
-                .padding(.bottom, 40)
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(L10n.text("meeting.new.title", "New Meeting"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .scrollDismissesKeyboard(.interactively)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: focusedNote ? 124 : 0)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) { save() }
-                        .fontWeight(.semibold)
-                        .disabled(selectedFriends.isEmpty)
+                .onChange(of: focusedNote) { _, isFocused in
+                    guard isFocused else { return }
+                    scrollToNoteSection(proxy: proxy)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    HStack {
+                .navigationTitle(L10n.text("meeting.new.title", "New Meeting"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L10n.text("common.save", "Save")) { save() }
+                            .fontWeight(.semibold)
+                            .disabled(selectedFriends.isEmpty)
+                    }
+                    ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
                         Button(L10n.text("common.done", "Done")) {
                             focusedNote = false
@@ -699,32 +720,31 @@ struct AddMeetingView: View {
                         }
                     }
                 }
-            }
-            .onChange(of: startDate) { _, newStart in
-                if endDate < newStart {
-                    endDate = newStart
+                .onChange(of: startDate) { _, newStart in
+                    if endDate < newStart {
+                        endDate = newStart
+                    }
                 }
-            }
-            .sheet(isPresented: $showingStartPicker) {
-                DateTimeWheelPickerSheet(
-                    title: L10n.text("meeting.start", "Start"),
-                    initialDate: startDate,
-                    range: Date.distantPast...endDate
-                ) { selectedDate in
-                    startDate = selectedDate
+                .sheet(isPresented: $showingStartPicker) {
+                    DateTimeWheelPickerSheet(
+                        title: L10n.text("meeting.start", "Start"),
+                        initialDate: startDate
+                    ) { selectedDate in
+                        startDate = selectedDate
+                    }
                 }
-            }
-            .sheet(isPresented: $showingEndPicker) {
-                DateTimeWheelPickerSheet(
-                    title: L10n.text("meeting.end", "End"),
-                    initialDate: endDate,
-                    range: startDate...Date.distantFuture
-                ) { selectedDate in
-                    endDate = max(selectedDate, startDate)
+                .sheet(isPresented: $showingEndPicker) {
+                    DateTimeWheelPickerSheet(
+                        title: L10n.text("meeting.end", "End"),
+                        initialDate: endDate,
+                        range: startDate...Date.distantFuture
+                    ) { selectedDate in
+                        endDate = max(selectedDate, startDate)
+                    }
                 }
-            }
-            .sheet(isPresented: $showingFriendsPicker) {
-                addFriendsSheet
+                .sheet(isPresented: $showingFriendsPicker) {
+                    addFriendsSheet
+                }
             }
         }
         .appScreenBackground()
@@ -783,25 +803,19 @@ struct AddMeetingView: View {
     private var noteSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             sectionLabel(L10n.text("meeting.section.note", "Note"), icon: "note.text")
-            ZStack(alignment: .topLeading) {
-                if note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(L10n.text("meeting.note.placeholder", "Add a note…"))
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                }
+            NoteEditorCard(
+                text: $note,
+                placeholder: L10n.text("meeting.note.placeholder", "Add a note…"),
+                minHeight: 132
+            ) {
                 TextEditor(text: $note)
                     .font(.body)
                     .focused($focusedNote)
-                    .frame(minHeight: 120, alignment: .topLeading)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .scrollContentBackground(.hidden)
+                    .textInputAutocapitalization(.sentences)
             }
-            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .padding(.horizontal, 24)
         }
+        .id(noteSectionScrollID)
     }
 
     /// Persists the newly created meeting.
@@ -817,7 +831,26 @@ struct AddMeetingView: View {
                 friends: selectedFriends
             )
         )
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Could not save meeting: \(error)")
+        }
         dismiss()
+    }
+
+    /// Stable scroll anchor ID used to keep the focused note visible above the keyboard.
+    private var noteSectionScrollID: String {
+        "add-meeting-note-section"
+    }
+
+    /// Scrolls to the notes section after focus changes.
+    private func scrollToNoteSection(proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                proxy.scrollTo(noteSectionScrollID, anchor: .bottom)
+            }
+        }
     }
 
     /// Stable alphabetical selection for avatar-strip rendering.
@@ -825,6 +858,12 @@ struct AddMeetingView: View {
         selectedFriends.sorted {
             $0.sortName.localizedCaseInsensitiveCompare($1.sortName) == .orderedAscending
         }
+    }
+
+    /// Removes duplicate friend references while preserving first-seen order.
+    private static func uniqueFriends(_ friends: [Friend]) -> [Friend] {
+        var seen = Set<PersistentIdentifier>()
+        return friends.filter { seen.insert($0.persistentModelID).inserted }
     }
 
     /// Sheet for selecting meeting/event participants.
@@ -877,9 +916,8 @@ struct AddMeetingView: View {
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
-                Text(L10n.text("common.add", "Add"))
-                    .font(.caption2)
-                    .lineLimit(1)
+                Image(systemName: "plus")
+                    .font(.caption.weight(.semibold))
                     .frame(width: 64)
                     .foregroundStyle(.secondary)
             }
@@ -930,42 +968,50 @@ struct AddEventView: View {
     }
 
     /// Initializes event creation state.
-    init(initialDate: Date = Date()) {
+    init(initialDate: Date = Date(), preselectedFriends: [Friend] = []) {
         let rounded = FiveMinuteDateTimePicker.roundedToFiveMinutes(initialDate)
         self.initialDate = rounded
         _startDate = State(initialValue: rounded)
+        _selectedFriends = State(initialValue: Self.uniqueFriends(preselectedFriends))
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 28) {
-                    eventTitleSection
-                    Divider().padding(.horizontal, 24)
-                    dateSection
-                    Divider().padding(.horizontal, 24)
-                    friendsSection
-                    Divider().padding(.horizontal, 24)
-                    noteSection
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 28) {
+                        eventTitleSection
+                        Divider().padding(.horizontal, 24)
+                        dateSection
+                        Divider().padding(.horizontal, 24)
+                        friendsSection
+                        Divider().padding(.horizontal, 24)
+                        noteSection
+                    }
+                    .padding(.bottom, 40)
                 }
-                .padding(.bottom, 40)
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(L10n.text("event.new.title", "New Event"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .scrollDismissesKeyboard(.interactively)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: focusedField == .note ? 124 : 0)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) { save() }
-                        .fontWeight(.semibold)
-                        .disabled(eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedFriends.isEmpty)
+                .onChange(of: focusedField) { _, newValue in
+                    guard newValue == .note else { return }
+                    scrollToNoteSection(proxy: proxy)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    HStack {
+                .navigationTitle(sheetTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L10n.text("common.save", "Save")) { save() }
+                            .fontWeight(.semibold)
+                            .disabled(eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedFriends.isEmpty)
+                    }
+                    ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
                         Button(L10n.text("common.done", "Done")) {
                             focusedField = nil
@@ -973,20 +1019,26 @@ struct AddEventView: View {
                         }
                     }
                 }
-            }
-            .sheet(isPresented: $showingStartPicker) {
-                DateTimeWheelPickerSheet(
-                    title: L10n.text("meeting.start", "Start"),
-                    initialDate: startDate
-                ) { selectedDate in
-                    startDate = selectedDate
+                .sheet(isPresented: $showingStartPicker) {
+                    DateTimeWheelPickerSheet(
+                        title: L10n.text("meeting.start", "Start"),
+                        initialDate: startDate
+                    ) { selectedDate in
+                        startDate = selectedDate
+                    }
                 }
-            }
-            .sheet(isPresented: $showingFriendsPicker) {
-                addFriendsSheet
+                .sheet(isPresented: $showingFriendsPicker) {
+                    addFriendsSheet
+                }
             }
         }
         .appScreenBackground()
+    }
+
+    /// Dynamic sheet title that mirrors the typed event title.
+    private var sheetTitle: String {
+        let trimmed = eventTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.text("event.new.title", "New Event") : trimmed
     }
 
     /// Event title input section.
@@ -1059,25 +1111,19 @@ struct AddEventView: View {
     private var noteSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             sectionLabel(L10n.text("meeting.section.note", "Note"), icon: "note.text")
-            ZStack(alignment: .topLeading) {
-                if note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(L10n.text("meeting.note.placeholder", "Add a note…"))
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                }
+            NoteEditorCard(
+                text: $note,
+                placeholder: L10n.text("meeting.note.placeholder", "Add a note…"),
+                minHeight: 132
+            ) {
                 TextEditor(text: $note)
                     .font(.body)
                     .focused($focusedField, equals: .note)
-                    .frame(minHeight: 120, alignment: .topLeading)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .scrollContentBackground(.hidden)
+                    .textInputAutocapitalization(.sentences)
             }
-            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .padding(.horizontal, 24)
         }
+        .id(noteSectionScrollID)
     }
 
     /// Persists the newly created event.
@@ -1096,7 +1142,26 @@ struct AddEventView: View {
                 friends: selectedFriends
             )
         )
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Could not save event: \(error)")
+        }
         dismiss()
+    }
+
+    /// Stable scroll anchor ID used to keep the focused note visible above the keyboard.
+    private var noteSectionScrollID: String {
+        "add-event-note-section"
+    }
+
+    /// Scrolls to the notes section after focus changes.
+    private func scrollToNoteSection(proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                proxy.scrollTo(noteSectionScrollID, anchor: .bottom)
+            }
+        }
     }
 
     /// Stable alphabetical selection for avatar-strip rendering.
@@ -1104,6 +1169,12 @@ struct AddEventView: View {
         selectedFriends.sorted {
             $0.sortName.localizedCaseInsensitiveCompare($1.sortName) == .orderedAscending
         }
+    }
+
+    /// Removes duplicate friend references while preserving first-seen order.
+    private static func uniqueFriends(_ friends: [Friend]) -> [Friend] {
+        var seen = Set<PersistentIdentifier>()
+        return friends.filter { seen.insert($0.persistentModelID).inserted }
     }
 
     /// Sheet for selecting meeting/event participants.
@@ -1156,9 +1227,8 @@ struct AddEventView: View {
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
-                Text(L10n.text("common.add", "Add"))
-                    .font(.caption2)
-                    .lineLimit(1)
+                Image(systemName: "plus")
+                    .font(.caption.weight(.semibold))
                     .frame(width: 64)
                     .foregroundStyle(.secondary)
             }
@@ -1181,6 +1251,60 @@ struct AddEventView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
+    }
+}
+
+/// Reusable editor card used for meeting/event notes in create and edit flows.
+private struct NoteEditorCard<Editor: View>: View {
+    @Binding var text: String
+    let placeholder: String
+    let minHeight: CGFloat
+    @ViewBuilder let editor: () -> Editor
+
+    private var isEmpty: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if isEmpty {
+                Text(placeholder)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .allowsHitTesting(false)
+            }
+
+            editor()
+                .frame(minHeight: minHeight, alignment: .topLeading)
+                // TextEditor has an intrinsic inner inset; compensate so edit/view spacing matches.
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .scrollContentBackground(.hidden)
+        }
+        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+/// Reusable read-only card used for meeting/event notes in view mode.
+private struct NoteReadCard: View {
+    let text: String
+    let emptyText: String
+    let minHeight: CGFloat
+
+    private var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        Text(trimmedText.isEmpty ? emptyText : text)
+            .font(.body)
+            .foregroundStyle(trimmedText.isEmpty ? .secondary : .primary)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

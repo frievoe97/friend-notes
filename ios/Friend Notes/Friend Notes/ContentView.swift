@@ -1,24 +1,54 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 // MARK: - Root
 
 /// Hosts the app's root tabs and keeps local notification scheduling in sync with data changes.
 struct ContentView: View {
+    /// Root tab selection keys for programmatic navigation.
+    private enum RootTab: Hashable {
+        case friends
+        case calendar
+        case gifts
+        case settings
+    }
+
+    /// Detail sheets opened from notification deep links.
+    private enum DeepLinkSheet: Identifiable {
+        case friend(String)
+        case meeting(String)
+
+        var id: String {
+            switch self {
+            case .friend(let id):
+                return "friend-\(id)"
+            case .meeting(let id):
+                return "meeting-\(id)"
+            }
+        }
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Query private var allFriends: [Friend]
     @Query private var allMeetings: [Meeting]
+    @ObservedObject private var notificationRouteStore = NotificationRouteStore.shared
     @State private var hasSeededDebugData = false
+    @State private var selectedTab: RootTab = .friends
+    @State private var deepLinkSheet: DeepLinkSheet?
+    @State private var showingOnboarding = false
 
+    @AppStorage("hasSeenOnboardingWizard") private var hasSeenOnboardingWizard = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @AppStorage("globalNotifyBirthday") private var globalNotifyBirthday = true
     @AppStorage("globalBirthdayReminderDays") private var globalBirthdayReminderDays = 3
     @AppStorage("globalNotifyMeetings") private var globalNotifyMeetings = true
     @AppStorage("globalMeetingReminderDays") private var globalMeetingReminderDays = 1
     @AppStorage("globalNotifyEvents") private var globalNotifyEvents = true
-    @AppStorage("globalEventReminderDays") private var globalEventReminderDays = 2
-    @AppStorage("globalNotifyLongNoMeeting") private var globalNotifyLongNoMeeting = false
+    @AppStorage("globalEventReminderDays") private var globalEventReminderDays = 1
+    @AppStorage("globalNotifyLongNoMeeting") private var globalNotifyLongNoMeeting = true
     @AppStorage("globalLongNoMeetingWeeks") private var globalLongNoMeetingWeeks = 4
+    @AppStorage("globalReminderTimeMinutes") private var globalReminderTimeMinutes = 9 * 60
     @AppStorage("globalNotifyPostMeetingNote") private var globalNotifyPostMeetingNote = true
 
     /// Builds a stable signature string for all friends to detect scheduling-relevant changes.
@@ -70,6 +100,7 @@ struct ContentView: View {
             globalEventReminderDays: globalEventReminderDays,
             globalNotifyLongNoMeeting: globalNotifyLongNoMeeting,
             globalLongNoMeetingWeeks: globalLongNoMeetingWeeks,
+            globalReminderTimeMinutes: globalReminderTimeMinutes,
             globalNotifyPostMeetingNote: globalNotifyPostMeetingNote
         )
     }
@@ -87,6 +118,7 @@ struct ContentView: View {
             "\(globalEventReminderDays)",
             "\(globalNotifyLongNoMeeting)",
             "\(globalLongNoMeetingWeeks)",
+            "\(globalReminderTimeMinutes)",
             "\(globalNotifyPostMeetingNote)",
             friendsSignature,
             meetingsSignature
@@ -96,10 +128,21 @@ struct ContentView: View {
     var body: some View {
         mainTabs
             .task {
+                if let pendingRoute = notificationRouteStore.pendingRoute {
+                    handleNotificationRoute(pendingRoute)
+                    notificationRouteStore.consume()
+                }
                 await refreshNotificationSchedule()
             }
             .onAppear {
                 seedDebugDataIfNeeded()
+                if !hasSeenOnboardingWizard {
+                    showingOnboarding = true
+                }
+            }
+            .onReceive(notificationRouteStore.$pendingRoute.compactMap { $0 }) { route in
+                handleNotificationRoute(route)
+                notificationRouteStore.consume()
             }
             .onChange(of: notificationsEnabled) { _, newValue in
                 Task {
@@ -116,23 +159,91 @@ struct ContentView: View {
                     await refreshNotificationSchedule()
                 }
             }
+            .sheet(item: $deepLinkSheet) { destination in
+                deepLinkDestinationView(for: destination)
+            }
+            .fullScreenCover(isPresented: $showingOnboarding) {
+                OnboardingWizardView(
+                    onSkip: completeOnboarding,
+                    onFinish: completeOnboarding
+                )
+                .interactiveDismissDisabled()
+            }
     }
 
     /// Renders the root tab view for friends, calendar, and global settings.
     private var mainTabs: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             FriendsListView()
                 .tabItem { Label(L10n.text("tab.friends", "Friends"), systemImage: "person.2.fill") }
+                .tag(RootTab.friends)
 
             CalendarView()
                 .tabItem { Label(L10n.text("tab.calendar", "Calendar"), systemImage: "calendar") }
+                .tag(RootTab.calendar)
+
+            GiftsView()
+                .tabItem { Label(L10n.text("tab.gifts", "Gifts"), systemImage: "gift.fill") }
+                .tag(RootTab.gifts)
 
             AppSettingsView()
                 .tabItem { Label(L10n.text("tab.settings", "Settings"), systemImage: "gearshape.fill") }
+                .tag(RootTab.settings)
         }
         .background {
             AppGradientBackground()
                 .ignoresSafeArea()
+        }
+    }
+
+    /// Handles one route from a tapped local notification.
+    private func handleNotificationRoute(_ route: AppNotificationRoute) {
+        switch route {
+        case .friend(let routeID):
+            selectedTab = .friends
+            deepLinkSheet = .friend(routeID)
+        case .meeting(let routeID):
+            selectedTab = .calendar
+            deepLinkSheet = .meeting(routeID)
+        }
+    }
+
+    /// Builds the presented destination view for deep-link sheets.
+    @ViewBuilder
+    private func deepLinkDestinationView(for destination: DeepLinkSheet) -> some View {
+        switch destination {
+        case .friend(let routeID):
+            if let friend = allFriends.first(where: { "\($0.persistentModelID)" == routeID }) {
+                NavigationStack {
+                    FriendDetailView(friend: friend)
+                }
+            } else {
+                NavigationStack {
+                    ContentUnavailableView(
+                        L10n.text("friend.unnamed", "Friend"),
+                        systemImage: "person.crop.circle.badge.exclamationmark",
+                        description: Text(L10n.text("notification.target.missing", "The related item could not be found."))
+                    )
+                    .navigationTitle(L10n.text("tab.friends", "Friends"))
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+            }
+        case .meeting(let routeID):
+            if let meeting = allMeetings.first(where: { "\($0.persistentModelID)" == routeID }) {
+                NavigationStack {
+                    MeetingDetailView(meeting: meeting)
+                }
+            } else {
+                NavigationStack {
+                    ContentUnavailableView(
+                        L10n.text("meeting.kind.event", "Event"),
+                        systemImage: "calendar.badge.exclamationmark",
+                        description: Text(L10n.text("notification.target.missing", "The related item could not be found."))
+                    )
+                    .navigationTitle(L10n.text("tab.calendar", "Calendar"))
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+            }
         }
     }
 
@@ -145,14 +256,238 @@ struct ContentView: View {
         )
     }
 
-    /// Inserts sample data once during debug runs when storage is empty.
+    /// Inserts/refreshes debug sample data and notification fixtures in debug runs.
     private func seedDebugDataIfNeeded() {
         #if DEBUG
         guard !hasSeededDebugData else { return }
         hasSeededDebugData = true
-        guard allFriends.isEmpty else { return }
-        DummyDataSeeder.insertDummyData(context: modelContext)
+        let persistedFriends = (try? modelContext.fetch(FetchDescriptor<Friend>())) ?? allFriends
+        if persistedFriends.isEmpty {
+            DummyDataSeeder.insertDummyData(context: modelContext)
+        } else {
+            DummyDataSeeder.ensureDynamicNotificationTestFixtures(context: modelContext)
+        }
+        Task {
+            await refreshNotificationSchedule()
+        }
         #endif
+    }
+
+    /// Marks onboarding as finished and hides the wizard.
+    private func completeOnboarding() {
+        hasSeenOnboardingWizard = true
+        showingOnboarding = false
+    }
+}
+
+/// First-launch onboarding wizard introducing the main app capabilities.
+private struct OnboardingWizardView: View {
+    /// Single onboarding page payload.
+    private struct Step: Identifiable {
+        let id: Int
+        let icon: String
+        let title: String
+        let message: String
+        let highlights: [String]
+    }
+
+    let onSkip: () -> Void
+    let onFinish: () -> Void
+
+    @State private var currentStepID = 0
+
+    private var steps: [Step] {
+        [
+            Step(
+                id: 0,
+                icon: "person.2.fill",
+                title: L10n.text("onboarding.step1.title", "Welcome to Friend Notes"),
+                message: L10n.text(
+                    "onboarding.step1.message",
+                    "Keep the important details about your people in one place."
+                ),
+                highlights: [
+                    L10n.text("onboarding.step1.h1", "Create friends with tags, birthdays and notes"),
+                    L10n.text("onboarding.step1.h2", "Pin favorites and keep profiles organized")
+                ]
+            ),
+            Step(
+                id: 1,
+                icon: "calendar",
+                title: L10n.text("onboarding.step2.title", "Plan Meetings & Events"),
+                message: L10n.text(
+                    "onboarding.step2.message",
+                    "Track past and upcoming time with friends directly in the calendar."
+                ),
+                highlights: [
+                    L10n.text("onboarding.step2.h1", "Add meetings/events and link one or multiple people"),
+                    L10n.text("onboarding.step2.h2", "Get reminders and jump from notifications into details")
+                ]
+            ),
+            Step(
+                id: 2,
+                icon: "gift.fill",
+                title: L10n.text("onboarding.step3.title", "Manage Gift Ideas"),
+                message: L10n.text(
+                    "onboarding.step3.message",
+                    "Collect ideas with notes and links, and mark gifts as completed."
+                ),
+                highlights: [
+                    L10n.text("onboarding.step3.h1", "Assign gifts to one friend or keep them unassigned"),
+                    L10n.text("onboarding.step3.h2", "Filter open/completed ideas and keep a clean overview")
+                ]
+            ),
+            Step(
+                id: 3,
+                icon: "gearshape.fill",
+                title: L10n.text("onboarding.step4.title", "Make It Yours"),
+                message: L10n.text(
+                    "onboarding.step4.message",
+                    "Tune reminders and app behavior in Settings whenever you want."
+                ),
+                highlights: [
+                    L10n.text("onboarding.step4.h1", "Control reminder categories and reminder time"),
+                    L10n.text("onboarding.step4.h2", "Use tags to keep your friend list easy to scan")
+                ]
+            )
+        ]
+    }
+
+    private var isLastStep: Bool {
+        currentStepID == steps.count - 1
+    }
+
+    var body: some View {
+        ZStack {
+            AppGradientBackground()
+
+            VStack(spacing: 18) {
+                topBar
+
+                TabView(selection: $currentStepID) {
+                    ForEach(steps) { step in
+                        stepCard(step)
+                            .tag(step.id)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 10)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                bottomControls
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+    }
+
+    /// Top control row containing the skip action.
+    private var topBar: some View {
+        HStack {
+            Spacer()
+            Button(L10n.text("onboarding.skip", "Skip")) {
+                onSkip()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(AppTheme.subtleFill, in: Capsule())
+        }
+        .padding(.horizontal, 24)
+    }
+
+    /// Card body for one onboarding step.
+    private func stepCard(_ step: Step) -> some View {
+        VStack(spacing: 18) {
+            Circle()
+                .fill(AppTheme.subtleFill)
+                .frame(width: 86, height: 86)
+                .overlay {
+                    Image(systemName: step.icon)
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+            VStack(spacing: 10) {
+                Text(step.title)
+                    .font(.title2.weight(.bold))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.primary)
+
+                Text(step.message)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(step.highlights, id: \.self) { item in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.top, 2)
+                        Text(item)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 28)
+        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    /// Bottom area with page indicators and navigation actions.
+    private var bottomControls: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 8) {
+                ForEach(steps) { step in
+                    Capsule()
+                        .fill(step.id == currentStepID ? AppTheme.accent : AppTheme.subtleFillSelected)
+                        .frame(width: step.id == currentStepID ? 20 : 8, height: 8)
+                }
+            }
+
+            HStack(spacing: 10) {
+                if currentStepID > 0 {
+                    Button(L10n.text("onboarding.back", "Back")) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            currentStepID -= 1
+                        }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(AppTheme.subtleFill, in: Capsule())
+                }
+
+                Button(isLastStep ? L10n.text("onboarding.start", "Start") : L10n.text("onboarding.next", "Next")) {
+                    if isLastStep {
+                        onFinish()
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            currentStepID += 1
+                        }
+                    }
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 12)
+                .background(AppTheme.accent, in: Capsule())
+            }
+        }
+        .padding(.horizontal, 24)
     }
 }
 
@@ -530,6 +865,31 @@ private enum DummyDataSeeder {
             UserDefaults.standard.set(AppTagStore.encode(defaultTags), forKey: AppTagStore.key)
         }
 
+        // Notification defaults:
+        // - 3 days birthday
+        // - 1 day meeting/event
+        // - 4 weeks long-no-meeting enabled
+        // - reminder time: debug -> near "now" for instant testing, release -> 09:00
+        let reminderTimeMinutes: Int
+        #if DEBUG
+        let nowParts = calendar.dateComponents([.hour, .minute], from: now)
+        let nowTotalMinutes = ((nowParts.hour ?? 9) * 60) + (nowParts.minute ?? 0)
+        reminderTimeMinutes = min(nowTotalMinutes + 2, (23 * 60) + 59)
+        #else
+        reminderTimeMinutes = 9 * 60
+        #endif
+        UserDefaults.standard.set(true, forKey: "notificationsEnabled")
+        UserDefaults.standard.set(true, forKey: "globalNotifyBirthday")
+        UserDefaults.standard.set(3, forKey: "globalBirthdayReminderDays")
+        UserDefaults.standard.set(true, forKey: "globalNotifyMeetings")
+        UserDefaults.standard.set(1, forKey: "globalMeetingReminderDays")
+        UserDefaults.standard.set(true, forKey: "globalNotifyEvents")
+        UserDefaults.standard.set(1, forKey: "globalEventReminderDays")
+        UserDefaults.standard.set(true, forKey: "globalNotifyLongNoMeeting")
+        UserDefaults.standard.set(4, forKey: "globalLongNoMeetingWeeks")
+        UserDefaults.standard.set(reminderTimeMinutes, forKey: "globalReminderTimeMinutes")
+        UserDefaults.standard.set(true, forKey: "globalNotifyPostMeetingNote")
+
         func day(_ offset: Int, _ hour: Int, _ minute: Int) -> Date {
             let base = calendar.date(byAdding: .day, value: offset, to: now) ?? now
             return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: base) ?? base
@@ -620,10 +980,12 @@ private enum DummyDataSeeder {
         }
 
         @discardableResult
-        func addGift(_ title: String, _ note: String, _ isGifted: Bool = false, to friend: Friend) -> GiftIdea {
+        func addGift(_ title: String, _ note: String, _ isGifted: Bool = false, to friend: Friend? = nil) -> GiftIdea {
             let idea = GiftIdea(title: title, note: note, isGifted: isGifted)
-            idea.friend = friend
-            friend.giftIdeas.append(idea)
+            if let friend {
+                idea.friend = friend
+                friend.giftIdeas.append(idea)
+            }
             context.insert(idea)
             return idea
         }
@@ -678,6 +1040,18 @@ private enum DummyDataSeeder {
             tags: ["Creative", "Study", "Music"],
             birthday: calendar.date(from: DateComponents(year: 1998, month: 7, day: 1)) ?? now
         )
+
+        // Make one birthday reminder fire today with default lead time of 3 days.
+        let birthdayTargetDate = calendar.date(byAdding: .day, value: 3, to: now) ?? now
+        let birthdayParts = calendar.dateComponents([.month, .day], from: birthdayTargetDate)
+        let emmaBirthYear = calendar.component(.year, from: emma.birthday ?? now)
+        emma.birthday = calendar.date(
+            from: DateComponents(
+                year: emmaBirthYear,
+                month: birthdayParts.month,
+                day: birthdayParts.day
+            )
+        ) ?? emma.birthday
 
         let friendData: [(friend: Friend, hobbies: [(String, String)], foods: [(String, String)], musics: [(String, String)], movies: [(String, String)], notes: [(String, String)])] = [
             (
@@ -762,7 +1136,43 @@ private enum DummyDataSeeder {
             }
         }
 
+        let extraGiftsByFriend: [(Friend, [(String, String, Bool)])] = [
+            (mia, [("Portable Tripod", "Compact phone + camera mount for city walks.", false), ("Specialty Coffee Beans", "Light roast from local roastery.", false), ("Museum Annual Pass", "For modern art exhibitions.", true)]),
+            (leon, [("Compression Socks", "For post-run recovery.", false), ("Trail Snack Pack", "High-protein bars + electrolyte tabs.", true), ("Recovery Foam Roller", "Medium density, travel size.", false)]),
+            (emma, [("Fountain Pen Ink Set", "Muted colors for journaling.", false), ("Art Store Gift Card", "For canvas + marker refill.", true), ("Noise-Reducing Earplugs", "For focused study sessions.", false)]),
+            (noah, [("Desk Cable Dock", "Weighted base for charging cables.", false), ("Cold Brew Bottle", "Heat-resistant glass with filter.", false), ("Bike Saddle Bag", "Slim and waterproof.", true)]),
+            (sofia, [("Weekend Duffel Bag", "Cabin-size with shoe compartment.", false), ("Hand Cream Set", "Travel-friendly minis.", true), ("Photography Tour Voucher", "Lisbon old town route.", false)]),
+            (paul, [("Sports Massage Voucher", "45-minute deep tissue session.", false), ("Bike Repair Stand", "Foldable for apartment storage.", true), ("Tennis Overgrip 12-Pack", "Dry feel, mixed colors.", false)]),
+            (lina, [("Acrylic Marker Set", "Fine + medium tips.", false), ("Foldable Easel", "Tabletop version for small spaces.", false), ("Concert Ticket Voucher", "Open date in autumn.", true)])
+        ]
+
+        for (friend, gifts) in extraGiftsByFriend {
+            for gift in gifts {
+                addGift(gift.0, gift.1, gift.2, to: friend)
+            }
+        }
+
+        let unassignedGifts: [(String, String, Bool)] = [
+            ("Universal Gift Card", "Keep as fallback for spontaneous invites.", false),
+            ("Premium Tea Sampler", "Works for almost anyone; mixed herbal set.", false),
+            ("Chocolate Praline Box", "Seasonal edition for host gifts.", true),
+            ("Scented Candle Duo", "Neutral fragrances for apartment warm-up.", false),
+            ("Notebook + Pen Bundle", "Emergency birthday option.", false),
+            ("Indoor Herb Kit", "Good for housewarming events.", true)
+        ]
+
+        for gift in unassignedGifts {
+            addGift(gift.0, gift.1, gift.2)
+        }
+
         let timeline: [Meeting] = [
+            makeMeeting(dayOffset: -46, startHour: 18, startMinute: 20, durationMinutes: 95, note: "After-work ramen with Leon and Noah; talked about summer race plans.", friends: [leon, noah]),
+            makeEvent(dayOffset: -42, hour: 9, minute: 30, title: "Sofia Visa Appointment", note: "Sent checklist and reminder the day before.", friends: [sofia]),
+            makeMeeting(dayOffset: -38, startHour: 19, startMinute: 5, durationMinutes: 105, note: "Museum + late dinner with Mia and Lina.", friends: [mia, lina]),
+            makeMeeting(dayOffset: -34, startHour: 12, startMinute: 15, durationMinutes: 70, note: "Lunch walk with Emma near campus before her seminar.", friends: [emma]),
+            makeEvent(dayOffset: -31, hour: 17, minute: 45, title: "Paul Apartment Handover", note: "Helped him move smaller boxes and brought snacks.", friends: [paul]),
+            makeMeeting(dayOffset: -27, startHour: 20, startMinute: 0, durationMinutes: 115, note: "Game night with Noah, Mia and Leon.", friends: [noah, mia, leon]),
+            makeEvent(dayOffset: -23, hour: 8, minute: 20, title: "Leon Physio Check", note: "Recovery update before race block.", friends: [leon]),
             makeMeeting(dayOffset: -18, startHour: 19, startMinute: 0, durationMinutes: 110, note: "Italian dinner catch-up. Mia wants feedback on her photo-book layout.", friends: [mia, emma]),
             makeEvent(dayOffset: -15, hour: 9, minute: 0, title: "Noah Production Rollout", note: "Send a good-luck message before deploy window.", friends: [noah]),
             makeMeeting(dayOffset: -13, startHour: 18, startMinute: 30, durationMinutes: 90, note: "Running session with Leon + Paul, then smoothie stop.", friends: [leon, paul]),
@@ -782,8 +1192,249 @@ private enum DummyDataSeeder {
             makeMeeting(dayOffset: 17, startHour: 13, startMinute: 0, durationMinutes: 70, note: "Quick lunch catch-up with Paul and Noah near office.", friends: [paul, noah]),
             makeEvent(dayOffset: 21, hour: 19, minute: 0, title: "Mia Photo Walk Meetup", note: "Golden hour route through old town.", friends: [mia, lina]),
             makeMeeting(dayOffset: 24, startHour: 18, startMinute: 20, durationMinutes: 120, note: "Group dinner: discuss summer trip dates.", friends: [mia, leon, emma, sofia, paul, lina]),
-            makeMeeting(dayOffset: 29, startHour: 11, startMinute: 0, durationMinutes: 90, note: "Sunday brunch with Sofia and Emma, keep it low-key.", friends: [sofia, emma])
+            makeMeeting(dayOffset: 29, startHour: 11, startMinute: 0, durationMinutes: 90, note: "Sunday brunch with Sofia and Emma, keep it low-key.", friends: [sofia, emma]),
+            makeEvent(dayOffset: 33, hour: 7, minute: 50, title: "Noah Conference Flight", note: "Share terminal info and coffee spot recommendation.", friends: [noah]),
+            makeMeeting(dayOffset: 36, startHour: 19, startMinute: 30, durationMinutes: 100, note: "Potluck dinner with Paul and Lina; bring dessert.", friends: [paul, lina]),
+            makeEvent(dayOffset: 40, hour: 15, minute: 0, title: "Emma Portfolio Review", note: "Prepare feedback points for her final presentation.", friends: [emma]),
+            makeMeeting(dayOffset: 44, startHour: 18, startMinute: 10, durationMinutes: 85, note: "Cycling + smoothie cooldown with Leon.", friends: [leon]),
+            makeEvent(dayOffset: 49, hour: 20, minute: 0, title: "Sofia Family Dinner", note: "Send flowers in the afternoon.", friends: [sofia]),
+            makeMeeting(dayOffset: 53, startHour: 12, startMinute: 40, durationMinutes: 75, note: "Lunch and stationery shopping with Mia.", friends: [mia]),
+            makeEvent(dayOffset: 57, hour: 10, minute: 30, title: "Lina Gallery Opening", note: "Meet at entrance 20 minutes early.", friends: [lina]),
+            makeMeeting(dayOffset: 61, startHour: 18, startMinute: 25, durationMinutes: 115, note: "Summer-planning dinner with full group.", friends: [mia, leon, emma, noah, sofia, paul, lina])
         ]
         timeline.forEach { context.insert($0) }
+        ensureDynamicNotificationTestFixtures(context: context)
+    }
+
+    /// Keeps notification test fixtures aligned with "today" so reminders are always testable.
+    ///
+    /// - Important: This runs only in debug workflows and is idempotent.
+    static func ensureDynamicNotificationTestFixtures(context: ModelContext) {
+        let calendar = Calendar.current
+        let now = Date()
+        let storedReminderWeeks = UserDefaults.standard.integer(forKey: "globalLongNoMeetingWeeks")
+        let reminderWeeks = storedReminderWeeks > 0 ? storedReminderWeeks : 4
+        #if DEBUG
+        let nowParts = calendar.dateComponents([.hour, .minute], from: now)
+        let nowTotalMinutes = ((nowParts.hour ?? 9) * 60) + (nowParts.minute ?? 0)
+        let debugReminderTimeMinutes = min(nowTotalMinutes + 2, (23 * 60) + 59)
+        UserDefaults.standard.set(debugReminderTimeMinutes, forKey: "globalReminderTimeMinutes")
+        #elseif !DEBUG
+        if UserDefaults.standard.object(forKey: "globalReminderTimeMinutes") == nil {
+            UserDefaults.standard.set(9 * 60, forKey: "globalReminderTimeMinutes")
+        }
+        #endif
+
+        var allFriends = (try? context.fetch(FetchDescriptor<Friend>())) ?? []
+        guard !allFriends.isEmpty else { return }
+
+        // Clean up legacy technical test contacts from earlier fixture versions.
+        let legacyFixtureFriends = allFriends.filter { candidate in
+            let first = candidate.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let last = candidate.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard first.compare("Reminder", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame else {
+                return false
+            }
+            return last.compare("Long No See", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame ||
+                last.hasPrefix("Case ")
+        }
+        if !legacyFixtureFriends.isEmpty {
+            legacyFixtureFriends.forEach { context.delete($0) }
+            allFriends = (try? context.fetch(FetchDescriptor<Friend>())) ?? []
+            guard !allFriends.isEmpty else { return }
+        }
+
+        func friend(firstName: String, lastName: String) -> Friend? {
+            allFriends.first {
+                $0.firstName.compare(firstName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame &&
+                $0.lastName.compare(lastName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            }
+        }
+
+        // Prefer canonical dummy people, then fall back to existing friends.
+        let preferredParticipants = [
+            friend(firstName: "Mia", lastName: "Schneider"),
+            friend(firstName: "Leon", lastName: "Keller"),
+            friend(firstName: "Emma", lastName: "Wagner"),
+            friend(firstName: "Paul", lastName: "Neumann"),
+            friend(firstName: "Noah", lastName: "Bergmann"),
+            friend(firstName: "Lina", lastName: "Krüger"),
+            friend(firstName: "Sofia", lastName: "Hartmann")
+        ].compactMap { $0 }
+
+        let sortedFallbackFriends = allFriends.sorted {
+            $0.sortName.localizedCaseInsensitiveCompare($1.sortName) == .orderedAscending
+        }
+        var seenIDs = Set<String>()
+        let participantFriends = (preferredParticipants + sortedFallbackFriends).filter { candidate in
+            let id = "\(candidate.persistentModelID)"
+            if seenIDs.contains(id) { return false }
+            seenIDs.insert(id)
+            return true
+        }
+        guard participantFriends.count >= 3 else { return }
+
+        let onePerson = [participantFriends[0]]
+        let twoPeople = [participantFriends[0], participantFriends[1]]
+        let threePeople = [participantFriends[0], participantFriends[1], participantFriends[2]]
+        let birthdayFriend = friend(firstName: "Emma", lastName: "Wagner") ?? participantFriends[0]
+        let longNoSeeFriend = upsertNaturalLongNoSeeFriend(
+            context: context,
+            existingFriends: allFriends,
+            now: now,
+            reminderWeeks: reminderWeeks
+        )
+
+        // Birthday reminder test: exactly 3 days in the future.
+        let birthdayTargetDate = calendar.date(byAdding: .day, value: 3, to: now) ?? now
+        let birthdayParts = calendar.dateComponents([.month, .day], from: birthdayTargetDate)
+        let birthdayYear = calendar.component(.year, from: birthdayFriend.birthday ?? now)
+        birthdayFriend.birthday = calendar.date(
+            from: DateComponents(
+                year: birthdayYear,
+                month: birthdayParts.month,
+                day: birthdayParts.day
+            )
+        ) ?? birthdayFriend.birthday
+
+        var existingMeetings = (try? context.fetch(FetchDescriptor<Meeting>())) ?? []
+        let deprecatedFixtureNotes = [
+            "[Notification Test] Meeting with 1 person",
+            "[Notification Test] Meeting with 2 people",
+            "[Notification Test] Meeting with 3 people",
+            "[Notification Test] Event reminder",
+            "[Notification Test] Long no see baseline",
+            "Notification test: meeting with one person.",
+            "Notification test: meeting with two people.",
+            "Notification test: meeting with three people.",
+            "Reminder should fire today (1 day before).",
+            "Long-time-no-see baseline meeting."
+        ]
+        for meeting in existingMeetings where deprecatedFixtureNotes.contains(meeting.note) {
+            context.delete(meeting)
+        }
+        existingMeetings = (try? context.fetch(FetchDescriptor<Meeting>())) ?? []
+
+        let startOfTomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
+        let testCases: [(note: String, title: String, kind: MeetingKind, startOffsetMinutes: Int, durationMinutes: Int, friends: [Friend])] = [
+            (
+                note: "Kaffee nach der Arbeit in Prenzlauer Berg.",
+                title: "",
+                kind: .meeting,
+                startOffsetMinutes: (17 * 60) + 15,
+                durationMinutes: 70,
+                friends: onePerson
+            ),
+            (
+                note: "Abendlauf im Park und danach ein schneller Snack.",
+                title: "",
+                kind: .meeting,
+                startOffsetMinutes: (18 * 60) + 30,
+                durationMinutes: 80,
+                friends: twoPeople
+            ),
+            (
+                note: "Spieleabend bei Leon mit Pasta und Musik.",
+                title: "",
+                kind: .meeting,
+                startOffsetMinutes: (19 * 60) + 45,
+                durationMinutes: 90,
+                friends: threePeople
+            ),
+            (
+                note: "Konzertabend im Stadtpark, Treffpunkt am Haupteingang.",
+                title: "Konzert im Stadtpark",
+                kind: .event,
+                startOffsetMinutes: (16 * 60) + 0,
+                durationMinutes: 0,
+                friends: twoPeople
+            )
+        ]
+
+        for testCase in testCases {
+            let startDate = calendar.date(byAdding: .minute, value: testCase.startOffsetMinutes, to: startOfTomorrow) ?? startOfTomorrow
+            let endDate = calendar.date(byAdding: .minute, value: testCase.durationMinutes, to: startDate) ?? startDate
+
+            if let existing = existingMeetings.first(where: { $0.note == testCase.note }) {
+                existing.kind = testCase.kind
+                existing.eventTitle = testCase.title
+                existing.startDate = startDate
+                existing.endDate = testCase.kind == .event ? startDate : max(endDate, startDate)
+                existing.friends = testCase.friends
+            } else {
+                let created = Meeting(
+                    eventTitle: testCase.title,
+                    startDate: startDate,
+                    endDate: testCase.kind == .event ? startDate : max(endDate, startDate),
+                    note: testCase.note,
+                    kind: testCase.kind,
+                    friends: testCase.friends
+                )
+                context.insert(created)
+            }
+        }
+
+        // Long-time-no-see fixture:
+        // Use a natural friend profile with one older baseline meeting.
+        let longNoSeeBaselineNote = "Frühstück im Altbau-Café, seitdem gab es kein neues Treffen."
+        let baselineStart = calendar.date(byAdding: .weekOfYear, value: -(reminderWeeks + 2), to: now) ?? now
+        let baselineEnd = calendar.date(byAdding: .minute, value: 60, to: baselineStart) ?? baselineStart
+        if let baselineMeeting = existingMeetings.first(where: { $0.note == longNoSeeBaselineNote }) {
+            baselineMeeting.kind = .meeting
+            baselineMeeting.eventTitle = ""
+            baselineMeeting.startDate = baselineStart
+            baselineMeeting.endDate = max(baselineEnd, baselineStart)
+            baselineMeeting.friends = [longNoSeeFriend]
+        } else {
+            let baselineMeeting = Meeting(
+                eventTitle: "",
+                startDate: baselineStart,
+                endDate: max(baselineEnd, baselineStart),
+                note: longNoSeeBaselineNote,
+                kind: .meeting,
+                friends: [longNoSeeFriend]
+            )
+            context.insert(baselineMeeting)
+        }
+
+        do {
+            try context.save()
+        } catch {
+            assertionFailure("Failed to persist dynamic notification fixtures: \(error)")
+        }
+    }
+
+    /// Ensures a natural dedicated friend exists for long-time-no-see reminder testing.
+    ///
+    /// - Returns: The friend used for the "long time no see" fixture.
+    private static func upsertNaturalLongNoSeeFriend(
+        context: ModelContext,
+        existingFriends: [Friend],
+        now: Date,
+        reminderWeeks: Int
+    ) -> Friend {
+        let firstName = "Hannah"
+        let lastName = "Weber"
+        let calendar = Calendar.current
+
+        if let existing = existingFriends.first(where: {
+            $0.firstName.compare(firstName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame &&
+            $0.lastName.compare(lastName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }) {
+            existing.createdAt = calendar.date(byAdding: .weekOfYear, value: -(reminderWeeks + 2), to: now) ?? existing.createdAt
+            return existing
+        }
+
+        let friend = Friend(
+            firstName: firstName,
+            lastName: lastName,
+            nickname: "Hanni",
+            tags: ["Travel", "Foodie", "Creative"],
+            birthday: calendar.date(from: DateComponents(year: 1995, month: 5, day: 11)),
+            isFavorite: false
+        )
+        friend.createdAt = calendar.date(byAdding: .weekOfYear, value: -(reminderWeeks + 2), to: now) ?? now
+        context.insert(friend)
+        return friend
     }
 }

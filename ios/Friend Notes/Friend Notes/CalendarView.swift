@@ -21,7 +21,7 @@ private enum CalendarDisplayMode: String, CaseIterable, Identifiable {
 /// Presents calendar-based and list-based timeline browsing for meetings, events, and birthdays.
 struct CalendarView: View {
     @AppStorage("showBirthdaysOnCalendar") private var showBirthdaysOnCalendar = true
-    @Query private var meetings: [Meeting]
+    @Query(sort: [SortDescriptor(\Meeting.startDate), SortDescriptor(\Meeting.endDate)]) private var meetings: [Meeting]
     @Query(sort: [SortDescriptor(\Friend.lastName), SortDescriptor(\Friend.firstName)]) private var friends: [Friend]
 
     @State private var displayedMonth: Date = {
@@ -60,23 +60,24 @@ struct CalendarView: View {
             .navigationTitle(L10n.text("calendar.title", "Calendar"))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
                             showingAddMeeting = true
                         } label: {
                             Label(L10n.text("meeting.new.title", "New Meeting"), systemImage: "person.2.fill")
                         }
+
                         Button {
                             showingAddEvent = true
                         } label: {
                             Label(L10n.text("event.new.title", "New Event"), systemImage: "flag.fill")
                         }
                     } label: {
-                        Text(L10n.text("common.add", "Add"))
+                        Image(systemName: "plus")
+                            .font(.body.weight(.semibold))
                     }
-                    .fontWeight(.semibold)
-                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.text("common.add", "Add"))
                 }
             }
             .sheet(isPresented: $showingAddMeeting) {
@@ -130,6 +131,7 @@ struct CalendarView: View {
                     .padding(.top, 16)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .scrollDisabled(selectedDayBirthdays.isEmpty && selectedDayEntries.isEmpty)
             .scrollContentBackground(.hidden)
             .background(Color.clear)
         }
@@ -197,11 +199,13 @@ struct CalendarView: View {
         LazyVGrid(columns: gridColumns, spacing: monthGridSpacing) {
             ForEach(Array(daysInMonth.enumerated()), id: \.offset) { _, date in
                 if let date {
+                    let dayEntries = entriesOn(date)
                     DayCell(
                         date: date,
                         isSelected: cal.isDate(date, inSameDayAs: selectedDate),
                         isToday: cal.isDateInToday(date),
-                        hasMeeting: !entriesOn(date).isEmpty,
+                        hasMeeting: dayEntries.contains(where: { $0.kind == .meeting }),
+                        hasEvent: dayEntries.contains(where: { $0.kind == .event }),
                         hasBirthday: showBirthdaysOnCalendar && !birthdaysOn(date).isEmpty
                     )
                     .onTapGesture {
@@ -224,17 +228,14 @@ struct CalendarView: View {
                 .padding(.horizontal, 28)
                 .padding(.bottom, 14)
 
-            let dayBirthdays = showBirthdaysOnCalendar ? birthdaysOn(selectedDate) : []
-            let dayEntries = entriesOn(selectedDate)
-
-            if dayBirthdays.isEmpty && dayEntries.isEmpty {
+            if selectedDayBirthdays.isEmpty && selectedDayEntries.isEmpty {
                 Text(L10n.text("calendar.day.empty", "No events"))
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 32)
             } else {
-                ForEach(dayBirthdays) { friend in
+                ForEach(selectedDayBirthdays) { friend in
                     NavigationLink(destination: FriendDetailView(friend: friend)) {
                         BirthdayEventRow(
                             friend: friend,
@@ -244,18 +245,28 @@ struct CalendarView: View {
                     .buttonStyle(.plain)
                     Divider().padding(.leading, 68)
                 }
-                ForEach(dayEntries) { entry in
+                ForEach(selectedDayEntries) { entry in
                     NavigationLink(destination: MeetingDetailView(meeting: entry)) {
                         MeetingEventRow(meeting: entry)
                     }
                     .buttonStyle(.plain)
-                    if entry.persistentModelID != dayEntries.last?.persistentModelID {
+                    if entry.persistentModelID != selectedDayEntries.last?.persistentModelID {
                         Divider().padding(.leading, 68)
                     }
                 }
             }
         }
         .padding(.bottom, 40)
+    }
+
+    /// Birthday entries shown for the currently selected day.
+    private var selectedDayBirthdays: [Friend] {
+        showBirthdaysOnCalendar ? birthdaysOn(selectedDate) : []
+    }
+
+    /// Meeting/event entries shown for the currently selected day.
+    private var selectedDayEntries: [Meeting] {
+        entriesOn(selectedDate)
     }
 
     /// Chronological timeline grouped by calendar week (future entries only).
@@ -307,16 +318,8 @@ struct CalendarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-        )
-        .compositingGroup()
-        .opacity(0.9)
         .padding(.horizontal, 4)
-        // .padding(.top, isFirst ? 8 : 12)
-        // .padding(.bottom, 2)
-        // .background(AppTheme.backgroundTop)
+        .background(.ultraThinMaterial, in: Capsule())
     }
 
     /// Builds the appropriate navigation row for one timeline item.
@@ -555,6 +558,7 @@ struct DayCell: View {
     let isSelected: Bool
     let isToday: Bool
     let hasMeeting: Bool
+    let hasEvent: Bool
     let hasBirthday: Bool
 
     var body: some View {
@@ -563,9 +567,17 @@ struct DayCell: View {
                 .font(.callout.weight((isToday || isSelected) ? .bold : .regular))
                 .foregroundStyle((isToday || isSelected) ? AppTheme.accent : .primary)
                 .frame(width: 34, height: 34)
+                .background {
+                    if isSelected {
+                        Circle()
+                            .fill(.clear)
+                            .glassEffect(.regular, in: Circle())
+                    }
+                }
             HStack(spacing: 3) {
                 if hasBirthday { Circle().fill(AppTheme.birthday).frame(width: 4, height: 4) }
                 if hasMeeting  { Circle().fill(AppTheme.accent).frame(width: 4, height: 4) }
+                if hasEvent  { Circle().fill(AppTheme.event).frame(width: 4, height: 4) }
             }
             .frame(height: 6)
         }

@@ -8,6 +8,8 @@ final class GiftIdea {
     var title: String
     /// Optional note or context for the gift.
     var note: String
+    /// Optional URL related to the gift idea (shop link, inspiration, etc.).
+    var url: String
     /// Whether this idea has already been gifted.
     var isGifted: Bool
     /// Creation timestamp.
@@ -20,10 +22,12 @@ final class GiftIdea {
     /// - Parameters:
     ///   - title: Idea title.
     ///   - note: Optional note.
+    ///   - url: Optional URL string.
     ///   - isGifted: Initial gifted state.
-    init(title: String = "", note: String = "", isGifted: Bool = false) {
+    init(title: String = "", note: String = "", url: String = "", isGifted: Bool = false) {
         self.title = title
         self.note = note
+        self.url = url
         self.isGifted = isGifted
         self.createdAt = Date()
     }

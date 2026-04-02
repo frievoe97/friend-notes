@@ -30,10 +30,13 @@ struct FriendEntryListView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(L10n.text("common.add", "Add")) {
+                Button {
                     showingAdd = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
                 }
-                .fontWeight(.semibold)
+                .accessibilityLabel(L10n.text("common.add", "Add"))
             }
         }
         .appScreenBackground()
@@ -167,13 +170,11 @@ struct AddFriendEntrySheet: View {
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    HStack {
-                        Spacer()
-                        Button(L10n.text("common.done", "Done")) {
-                            focusedField = nil
-                            Keyboard.dismiss()
-                        }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L10n.text("common.done", "Done")) {
+                        focusedField = nil
+                        Keyboard.dismiss()
                     }
                 }
             }
@@ -187,20 +188,38 @@ struct AddFriendEntrySheet: View {
 struct EditFriendEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var entry: FriendEntry
+    @State private var draftTitle: String
+    @State private var draftNote: String
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case title
+        case note
+    }
+
+    init(entry: FriendEntry) {
+        self.entry = entry
+        _draftTitle = State(initialValue: entry.title)
+        _draftNote = State(initialValue: entry.note)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField(L10n.text("entry.name", "Title"), text: $entry.title)
+                    TextField(L10n.text("entry.name", "Title"), text: $draftTitle)
                         .textFieldStyle(.plain)
+                        .focused($focusedField, equals: .title)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .note }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    TextField(L10n.text("entry.note", "Note (optional)"), text: $entry.note, axis: .vertical)
+                    TextField(L10n.text("entry.note", "Note (optional)"), text: $draftNote, axis: .vertical)
                         .textFieldStyle(.plain)
                         .lineLimit(4...)
+                        .focused($focusedField, equals: .note)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -217,8 +236,20 @@ struct EditFriendEntrySheet: View {
                     Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) { dismiss() }
-                        .fontWeight(.semibold)
+                    Button(L10n.text("common.save", "Save")) {
+                        entry.title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                        entry.note = draftNote.trimmingCharacters(in: .whitespacesAndNewlines)
+                        dismiss()
+                    }
+                    .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .fontWeight(.semibold)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L10n.text("common.done", "Done")) {
+                        focusedField = nil
+                        Keyboard.dismiss()
+                    }
                 }
             }
         }
@@ -233,6 +264,8 @@ struct FriendMeetingsView: View {
     @Bindable var friend: Friend
     @State private var isPastExpanded = false
     @State private var showAllUpcoming = false
+    @State private var showingAddMeeting = false
+    @State private var showingAddEvent = false
 
     private let upcomingLimit = 5
 
@@ -266,17 +299,30 @@ struct FriendMeetingsView: View {
                         }
                         .listRowBackground(AppTheme.subtleFill)
                     }
-                    if upcoming.count > upcomingLimit && !showAllUpcoming {
-                        Button {
-                            withAnimation { showAllUpcoming = true }
-                        } label: {
-                            Text(L10n.text("meeting.show_more", "+%d more", upcoming.count - upcomingLimit))
-                                .font(.subheadline)
-                                .foregroundStyle(AppTheme.accent)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 4)
+                    if upcoming.count > upcomingLimit {
+                        if !showAllUpcoming {
+                            Button {
+                                withAnimation { showAllUpcoming = true }
+                            } label: {
+                                Text(L10n.text("friend.history.upcoming.show_all", "Show all upcoming (%d)", upcoming.count))
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.accent)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.vertical, 4)
+                            }
+                            .listRowBackground(AppTheme.subtleFill)
+                        } else {
+                            Button {
+                                withAnimation { showAllUpcoming = false }
+                            } label: {
+                                Text(L10n.text("friend.history.upcoming.show_less", "Show fewer upcoming"))
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.accent)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.vertical, 4)
+                            }
+                            .listRowBackground(AppTheme.subtleFill)
                         }
-                        .listRowBackground(AppTheme.subtleFill)
                     }
                 }
             }
@@ -309,13 +355,34 @@ struct FriendMeetingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .navigationTitle(L10n.text("friend.section.history", "Meeting / Event History"))
+        .navigationTitle(L10n.text("friend.section.history", "Meetings/Events"))
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showingAddMeeting = true
+                    } label: {
+                        Label(L10n.text("meeting.new.title", "New Meeting"), systemImage: "person.2.fill")
+                    }
+
+                    Button {
+                        showingAddEvent = true
+                    } label: {
+                        Label(L10n.text("event.new.title", "New Event"), systemImage: "flag.fill")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
+                }
+                .accessibilityLabel(L10n.text("common.add", "Add"))
+            }
+        }
         .overlay {
             if upcoming.isEmpty && past.isEmpty {
                 ContentUnavailableView {
                     Label(
-                        L10n.text("friend.section.history", "Meeting / Event History"),
+                        L10n.text("friend.section.history", "Meetings/Events"),
                         systemImage: "clock.arrow.circlepath"
                     )
                 } description: {
@@ -325,6 +392,12 @@ struct FriendMeetingsView: View {
                     ))
                 }
             }
+        }
+        .sheet(isPresented: $showingAddMeeting) {
+            AddMeetingView(initialDate: Date(), preselectedFriends: [friend])
+        }
+        .sheet(isPresented: $showingAddEvent) {
+            AddEventView(initialDate: Date(), preselectedFriends: [friend])
         }
         .appScreenBackground()
     }
@@ -383,16 +456,24 @@ struct FriendGiftsView: View {
     private var giftedIdeas: [GiftIdea] { sorted.filter(\.isGifted) }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            giftList
-            addFAB
-        }
+        giftList
         .navigationTitle(L10n.text("friend.section.gift_ideas", "Gift Ideas"))
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingAddGiftIdea = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
+                }
+                .accessibilityLabel(L10n.text("common.add", "Add"))
+            }
+        }
         .appScreenBackground()
         .sheet(isPresented: $showingAddGiftIdea) {
-            AddGiftIdeaSheet { title, note in
-                addGiftIdea(title: title, note: note)
+            AddGiftIdeaSheet { title, note, url in
+                addGiftIdea(title: title, note: note, url: url)
             }
         }
         .sheet(isPresented: editingSheetBinding) {
@@ -451,18 +532,6 @@ struct FriendGiftsView: View {
         }
     }
 
-    private var addFAB: some View {
-        Button { showingAddGiftIdea = true } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 56, height: 56)
-        }
-        .glassEffect(in: Circle())
-        .padding(.trailing, 20)
-        .padding(.bottom, 28)
-    }
-
     @ViewBuilder
     private func giftRow(_ idea: GiftIdea) -> some View {
         HStack(spacing: 14) {
@@ -492,6 +561,20 @@ struct FriendGiftsView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
+
+                let trimmedURL = idea.url.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmedURL.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "link")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(trimmedURL)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
             }
 
             Spacer()
@@ -501,12 +584,13 @@ struct FriendGiftsView: View {
         .onTapGesture { editingGiftIdea = idea }
     }
 
-    private func addGiftIdea(title: String, note: String) {
+    private func addGiftIdea(title: String, note: String, url: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let idea = GiftIdea(
             title: trimmed,
-            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            url: url.trimmingCharacters(in: .whitespacesAndNewlines)
         )
         modelContext.insert(idea)
         friend.giftIdeas.append(idea)

@@ -1,0 +1,174 @@
+<resources>
+    <string name="app_name">Friend Notes</string>
+    <string name="splash_title">Friend Notes</string>
+
+    <string name="tab_friends">Freunde</string>
+    <string name="tab_calendar">Kalender</string>
+    <string name="tab_settings">Einstellungen</string>
+
+    <string name="common_add">Hinzufügen</string>
+    <string name="common_save">Speichern</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_next">Weiter</string>
+    <string name="common_delete">Löschen</string>
+    <string name="common_edit">Bearbeiten</string>
+    <string name="common_done">Fertig</string>
+    <string name="common_close">Schließen</string>
+    <string name="common_create">Erstellen</string>
+    <string name="common_update">Aktualisieren</string>
+
+    <string name="friends_title">Freunde</string>
+    <string name="friends_add_cta">Freund hinzufügen</string>
+    <string name="friends_empty_title">Noch keine Freunde</string>
+    <string name="friends_empty_subtitle">Füge zuerst deinen ersten Freund hinzu.</string>
+    <string name="friends_search_hint">Freunde, Tags, Einträge suchen…</string>
+    <string name="friends_favorite">Favorit</string>
+    <string name="friends_full_name">Voller Name</string>
+    <string name="friends_nickname">Spitzname</string>
+    <string name="friends_unnamed">Unbenannt</string>
+    <string name="friends_delete_warning">Diesen Freund dauerhaft löschen? Das kann nicht rückgängig gemacht werden.</string>
+    <string name="friends_tags">Tags</string>
+    <string name="friends_birthday">Geburtstag</string>
+    <string name="friends_remove_birthday">Geburtstag entfernen</string>
+    <string name="friend_no_birthday">Kein Geburtstag hinterlegt</string>
+    <string name="friend_tags_empty_hint">Lege Tags zuerst in den Einstellungen an.</string>
+    <string name="friend_tags_none">Keine Tags ausgewählt.</string>
+
+    <string name="last_seen_today">Heute gesehen</string>
+    <string name="last_seen_days">Vor %1$d Tagen gesehen</string>
+    <string name="last_seen_weeks">Vor %1$d Wochen gesehen</string>
+    <string name="last_seen_months">Vor %1$d Monaten gesehen</string>
+    <string name="last_seen_years">Vor %1$d Jahren gesehen</string>
+    <string name="last_seen_never">Noch keine Treffen</string>
+
+    <string name="sort_name_asc">Name A-Z</string>
+    <string name="sort_name_desc">Name Z-A</string>
+    <string name="sort_last_seen_asc">Zuletzt gesehen älteste</string>
+    <string name="sort_last_seen_desc">Zuletzt gesehen neueste</string>
+    <string name="sort_next_meeting">Nächstes Meeting</string>
+    <string name="sort_next_event">Nächstes Event</string>
+
+    <string name="add_friend_title">Freund erstellen</string>
+    <string name="edit_friend_title">Freunddetails</string>
+    <string name="first_name">Vorname</string>
+    <string name="last_name">Nachname</string>
+    <string name="nickname">Spitzname</string>
+    <string name="birthday_optional">Geburtstag (optional)</string>
+    <string name="required_name_message">Bitte mindestens Vorname oder Nachname eingeben.</string>
+
+    <string name="category_hobbies">Hobbys</string>
+    <string name="category_foods">Essen</string>
+    <string name="category_musics">Musik</string>
+    <string name="category_movies_series">Filme/Serien</string>
+    <string name="category_notes">Notizen</string>
+    <string name="category_meetings_events">Meetings &amp; Events</string>
+    <string name="category_gift_ideas">Geschenkideen</string>
+
+    <string name="entry_empty">Noch keine Einträge in dieser Kategorie.</string>
+    <string name="entry_title">Titel</string>
+    <string name="entry_note">Notiz</string>
+    <string name="entry_add">Eintrag hinzufügen</string>
+    <string name="entry_edit">Eintrag bearbeiten</string>
+    <string name="entry_required_title">Titel ist erforderlich.</string>
+    <string name="entry_multiline_hint">Titel: Notiz</string>
+
+    <string name="gifts_title">Geschenkideen</string>
+    <string name="gifts_open">Offene Ideen</string>
+    <string name="gifts_done">Verschenkt</string>
+    <string name="gifts_empty">Noch keine Geschenkideen.</string>
+    <string name="gift_add">Geschenkidee hinzufügen</string>
+    <string name="gift_edit">Geschenkidee bearbeiten</string>
+    <string name="gift_required_title">Geschenktitel ist erforderlich.</string>
+
+    <string name="calendar_title">Kalender</string>
+    <string name="calendar_mode_calendar">Kalender</string>
+    <string name="calendar_mode_upcoming">Anstehend</string>
+    <string name="calendar_new">Hinzufügen</string>
+    <string name="calendar_new_meeting">Neues Meeting</string>
+    <string name="calendar_new_event">Neues Event</string>
+    <string name="calendar_no_items">Keine Einträge für diesen Tag.</string>
+    <string name="calendar_birthdays">Geburtstage</string>
+    <string name="calendar_meetings_events">Meetings &amp; Events</string>
+    <string name="calendar_upcoming_empty">Keine anstehenden Events oder Geburtstage.</string>
+    <string name="calendar_age">wird %1$d</string>
+    <string name="calendar_week_label">KW %1$d</string>
+
+    <string name="meeting_title">Meeting</string>
+    <string name="event_title">Event</string>
+    <string name="meeting_history_title">Meeting-/Event-Verlauf</string>
+    <string name="meeting_history_empty">Noch keine Meetings oder Events.</string>
+    <string name="meeting_section_upcoming">Anstehend</string>
+    <string name="meeting_section_past">Vergangen</string>
+    <string name="meeting_show_more">+%1$d mehr</string>
+    <string name="meeting_note">Meeting-Notiz</string>
+    <string name="meeting_note_empty">Noch keine Notiz.</string>
+    <string name="meeting_start">Start</string>
+    <string name="meeting_end">Ende</string>
+    <string name="meeting_friends">Freunde</string>
+    <string name="meeting_title_field">Event-Titel</string>
+    <string name="meeting_choose_friends">Freunde auswählen</string>
+    <string name="meeting_create_title">Meeting erstellen</string>
+    <string name="event_create_title">Event erstellen</string>
+    <string name="meeting_delete_warning">Dieses Meeting oder Event dauerhaft löschen? Das kann nicht rückgängig gemacht werden.</string>
+    <string name="meeting_validation_friend_required">Bitte mindestens einen Freund auswählen.</string>
+    <string name="event_validation_fields_required">Event-Titel und mindestens ein Freund sind erforderlich.</string>
+    <string name="meeting_validation_date_order">Enddatum muss nach oder gleich dem Startdatum liegen.</string>
+
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_section_notifications">Globale Benachrichtigungen</string>
+    <string name="settings_section_calendar">Kalender</string>
+    <string name="settings_section_tags">Freundes-Tags</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="settings_when">Wann</string>
+    <string name="settings_show_birthdays_calendar">Geburtstage im Kalender anzeigen</string>
+    <string name="settings_manage_tags">Globale Tags verwalten</string>
+    <string name="settings_add_tag_hint">Tag hinzufügen</string>
+    <string name="settings_add_tag">Tag hinzufügen</string>
+    <string name="settings_duplicate_tag">Tag existiert bereits.</string>
+    <string name="settings_invalid_tag">Bitte einen Tag eingeben.</string>
+    <string name="settings_tags_empty">Noch keine Tags definiert.</string>
+
+    <string name="settings_notify_birthday">Geburtstags-Erinnerungen</string>
+    <string name="settings_notify_meetings">Meeting-Erinnerungen</string>
+    <string name="settings_notify_events">Event-Erinnerungen</string>
+    <string name="settings_notify_long_no_meeting">Lange-kein-Meeting-Erinnerungen</string>
+    <string name="settings_notify_post_meeting_note">Nach-Meeting-Notiz-Erinnerungen</string>
+
+    <string name="settings_days_before">Tage vorher: %1$d</string>
+    <string name="settings_weeks_after">Wochen: %1$d</string>
+    <string name="settings_day_before_one">1 Tag vorher</string>
+    <string name="settings_day_before_other">%1$d Tage vorher</string>
+    <string name="settings_week_one">1 Woche</string>
+    <string name="settings_week_other">%1$d Wochen</string>
+
+    <string name="notification_channel_name">Freunde-Erinnerungen</string>
+    <string name="notification_channel_desc">Geburtstags-, Meeting- und Event-Erinnerungen</string>
+    <string name="notification_birthday_title">Geburtstags-Erinnerung</string>
+    <string name="notification_birthday_body">%1$s hat bald Geburtstag.</string>
+    <string name="notification_meeting_title">Meeting-Erinnerung</string>
+    <string name="notification_meeting_body">Du hast ein Meeting mit %1$s geplant.</string>
+    <string name="notification_event_title">Event-Erinnerung</string>
+    <string name="notification_event_body">Anstehendes Event: %1$s.</string>
+    <string name="notification_long_no_meeting_title">Lange nicht getroffen</string>
+    <string name="notification_long_no_meeting_body">Du hast %1$s schon länger nicht getroffen.</string>
+    <string name="notification_post_meeting_title">Meeting-Notiz ergänzen</string>
+    <string name="notification_post_meeting_body">Ergänze deine Notizen nach dem heutigen Meeting mit %1$s.</string>
+
+    <string name="friends_section_entries">Einträge</string>
+    <string name="friends_section_meetings">Meetings &amp; Events</string>
+    <string name="friends_section_gifts">Geschenkideen</string>
+
+    <string name="modal_select_date">Datum auswählen</string>
+    <string name="modal_select_date_time">Datum &amp; Uhrzeit auswählen</string>
+
+    <string name="weekday_monday_short">Mo</string>
+    <string name="weekday_tuesday_short">Di</string>
+    <string name="weekday_wednesday_short">Mi</string>
+    <string name="weekday_thursday_short">Do</string>
+    <string name="weekday_friday_short">Fr</string>
+    <string name="weekday_saturday_short">Sa</string>
+    <string name="weekday_sunday_short">So</string>
+
+    <string name="privacy_title">Datenschutz</string>
+    <string name="privacy_body">Alle Daten bleiben auf deinem Gerät.</string>
+</resources>

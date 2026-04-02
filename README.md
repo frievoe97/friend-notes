@@ -1,15 +1,15 @@
-# FriendsApp
+# Friend Notes
 
-FriendsApp is an iOS app built to help you take better care of your friendships in everyday life. Instead of relying on memory alone, the app gives you a structured and private place to keep track of the people who matter to you: their personal details, shared moments, birthdays, and meaningful notes.
+Friend Notes is an iOS app built to help you take better care of your friendships in everyday life. Instead of relying on memory alone, the app gives you a structured and private place to keep track of the people who matter to you: their personal details, shared moments, birthdays, and meaningful notes.
 
-The goal is simple: make it easier to stay connected consistently. FriendsApp helps you remember important dates, plan meetings and events, capture gift ideas, and maintain context over time so relationships do not fade in a busy schedule.
+The goal is simple: make it easier to stay connected consistently. Friend Notes helps you remember important dates, plan meetings and events, capture gift ideas, and maintain context over time so relationships do not fade in a busy schedule.
 
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/ios/screenshot_1.png" alt="FriendsApp Screenshot 1" width="32%" />
-  <img src="screenshots/ios/screenshot_2.png" alt="FriendsApp Screenshot 2" width="32%" />
-  <img src="screenshots/ios/screenshot_3.png" alt="FriendsApp Screenshot 3" width="32%" />
+  <img src="screenshots/ios/screenshot_1.png" alt="Friend Notes Screenshot 1" width="32%" />
+  <img src="screenshots/ios/screenshot_2.png" alt="Friend Notes Screenshot 2" width="32%" />
+  <img src="screenshots/ios/screenshot_3.png" alt="Friend Notes Screenshot 3" width="32%" />
 </p>
 
 ## Highlights
@@ -39,8 +39,8 @@ The goal is simple: make it easier to stay connected consistently. FriendsApp he
 ## Project Structure
 
 ```text
-FriendsApp/
-├─ FriendsAppApp.swift          # App entry, SwiftData container, notification delegate
+Friend Notes/
+├─ FriendNotesApp.swift          # App entry, SwiftData container, notification delegate
 ├─ ContentView.swift            # Root tabs + friends list
 ├─ FriendDetailView.swift       # Create/edit friends + gift ideas
 ├─ CalendarView.swift           # Calendar and upcoming views
@@ -78,7 +78,7 @@ FriendsApp/
 ## Getting Started
 
 1. Open the project in Xcode:
-   - `FriendsApp.xcodeproj`
+   - `Friend Notes.xcodeproj`
 2. Select an iOS simulator device
 3. Build and run (`Cmd + R`)
 

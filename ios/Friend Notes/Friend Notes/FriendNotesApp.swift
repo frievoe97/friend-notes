@@ -32,6 +32,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) {
         completionHandler([.banner, .sound, .badge])
     }
+
+    /// Handles user taps on local notifications and forwards deep-link metadata to the UI layer.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        NotificationRouteStore.shared.handle(response: response)
+        completionHandler()
+    }
 }
 
 /// Main application entry point and root model container bootstrap.

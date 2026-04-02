@@ -15,38 +15,100 @@ struct AppSettingsView: View {
     @AppStorage("globalNotifyMeetings") private var globalNotifyMeetings = true
     @AppStorage("globalMeetingReminderDays") private var globalMeetingReminderDays = 1
     @AppStorage("globalNotifyEvents") private var globalNotifyEvents = true
-    @AppStorage("globalEventReminderDays") private var globalEventReminderDays = 2
-    @AppStorage("globalNotifyLongNoMeeting") private var globalNotifyLongNoMeeting = false
+    @AppStorage("globalEventReminderDays") private var globalEventReminderDays = 1
+    @AppStorage("globalNotifyLongNoMeeting") private var globalNotifyLongNoMeeting = true
     @AppStorage("globalLongNoMeetingWeeks") private var globalLongNoMeetingWeeks = 4
+    @AppStorage("globalReminderTimeMinutes") private var globalReminderTimeMinutes = 9 * 60
     @AppStorage("globalNotifyPostMeetingNote") private var globalNotifyPostMeetingNote = true
 
     @State private var newTag = ""
+    @State private var showAllTags = false
     @State private var notificationStatusMessage = ""
+    @FocusState private var focusedField: FocusField?
+    private let tagPreviewLimit = 14
+    private let addTagInputScrollID = "settings-add-tag-input"
+
+    /// Focus targets in the settings form.
+    private enum FocusField {
+        case newTag
+    }
 
     /// Decoded globally configured friend tags from app storage.
     private var definedTags: [String] {
         AppTagStore.decode(definedTagsRaw)
     }
 
+    /// Returns globally defined tags in alphabetical order.
+    private var sortedTags: [String] {
+        definedTags.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    /// Tags currently shown in the chip flow (collapsed or expanded).
+    private var visibleTags: [String] {
+        showAllTags ? sortedTags : Array(sortedTags.prefix(tagPreviewLimit))
+    }
+
+    /// Binding that maps persisted reminder minutes to a `Date` used by time pickers.
+    private var reminderTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                let now = Date()
+                let clamped = min(max(globalReminderTimeMinutes, 0), (23 * 60) + 59)
+                let hour = clamped / 60
+                let minute = clamped % 60
+                return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: now) ?? now
+            },
+            set: { newValue in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                let hour = components.hour ?? 9
+                let minute = components.minute ?? 0
+                globalReminderTimeMinutes = min(max((hour * 60) + minute, 0), (23 * 60) + 59)
+            }
+        )
+    }
+
     var body: some View {
         NavigationStack {
-            List {
-                globalNotificationsSection
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                calendarSection
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                tagsSection
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+            ScrollViewReader { proxy in
+                List {
+                    globalNotificationsSection
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    calendarSection
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    tagsSection
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowSeparator(.hidden, edges: .bottom)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .compositingGroup()
+                .background(AppGradientBackground())
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: focusedField == .newTag ? 112 : 0)
+                }
+                .onChange(of: focusedField) { _, newValue in
+                    guard newValue == .newTag else { return }
+                    DispatchQueue.main.async {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            proxy.scrollTo(addTagInputScrollID, anchor: .bottom)
+                        }
+                    }
+                }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .compositingGroup()
-            .background(AppGradientBackground())
             .navigationTitle(L10n.text("settings.title", "Settings"))
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L10n.text("common.done", "Done")) {
+                        focusedField = nil
+                        Keyboard.dismiss()
+                    }
+                }
+            }
             .onAppear(perform: normalizeReminderRanges)
             .onChange(of: notificationsEnabled) { _, newValue in
                 guard newValue else {
@@ -73,6 +135,20 @@ struct AppSettingsView: View {
         Section {
             Toggle(L10n.text("settings.notifications.enable", "Enable Notifications"), isOn: $notificationsEnabled)
             if notificationsEnabled {
+                HStack {
+                    Text(L10n.text("settings.reminder.time", "Reminder time"))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    DatePicker(
+                        L10n.text("settings.reminder.time", "Reminder time"),
+                        selection: reminderTimeBinding,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                }
+                .font(.subheadline)
+
                 reminderRow(
                     title: L10n.text("settings.reminder.birthdays", "Birthdays"),
                     isOn: $globalNotifyBirthday,
@@ -132,34 +208,78 @@ struct AppSettingsView: View {
     /// Section for managing globally reusable friend tags.
     private var tagsSection: some View {
         Section {
-            if definedTags.isEmpty {
-                Text(L10n.text("settings.tags.empty", "No tags defined yet."))
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(definedTags, id: \.self) { tag in
-                    HStack {
-                        Text(tag)
-                        Spacer()
-                        Button(role: .destructive) {
-                            removeTag(tag)
-                        } label: {
-                            Image(systemName: "trash")
-                                .foregroundStyle(AppTheme.danger)
+            VStack(alignment: .leading, spacing: 12) {
+                addTagInput
+
+                if definedTags.isEmpty {
+                    Text(L10n.text("settings.tags.empty", "No tags defined yet."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    FlowLayout(spacing: 8) {
+                        ForEach(visibleTags, id: \.self) { tag in
+                            TagChip(tag: tag) {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                    removeTag(tag)
+                                }
+                            }
+                            .contentShape(Rectangle())
                         }
                     }
-                }
-            }
 
-            HStack {
-                TextField(L10n.text("settings.tags.add_placeholder", "Add tag"), text: $newTag)
-                    .submitLabel(.done)
-                    .onSubmit(addTag)
-                if !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Button(L10n.text("common.add", "Add"), action: addTag)
+                    if sortedTags.count > tagPreviewLimit {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showAllTags.toggle()
+                            }
+                        } label: {
+                            Text(
+                                showAllTags
+                                    ? L10n.text("settings.tags.show_less", "Show fewer tags")
+                                    : L10n.text("settings.tags.show_all", "Show all tags (%d)", sortedTags.count)
+                            )
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.accent)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         } header: {
             Text(L10n.text("settings.tags.header", "Friend Tags"))
+        }
+    }
+
+    /// Input row for adding new globally reusable tags.
+    private var addTagInput: some View {
+        HStack(spacing: 10) {
+            TextField(L10n.text("settings.tags.add_placeholder", "Add tag"), text: $newTag)
+                .textFieldStyle(.plain)
+                .focused($focusedField, equals: .newTag)
+                .submitLabel(.done)
+                .onSubmit(addTag)
+
+            let canAdd = !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            Button(action: addTag) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.accent.opacity(0.35))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canAdd)
+            .accessibilityLabel(L10n.text("common.add", "Add"))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .appGlassCard(cornerRadius: 14)
+        .id(addTagInputScrollID)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            focusedField = .newTag
         }
     }
 
@@ -247,6 +367,7 @@ struct AppSettingsView: View {
         globalMeetingReminderDays = min(max(globalMeetingReminderDays, 1), 7)
         globalEventReminderDays = min(max(globalEventReminderDays, 1), 7)
         globalLongNoMeetingWeeks = max(globalLongNoMeetingWeeks, 1)
+        globalReminderTimeMinutes = min(max(globalReminderTimeMinutes, 0), (23 * 60) + 59)
     }
 }
 

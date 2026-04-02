@@ -1,5 +1,6 @@
 "tab.friends" = "Freunde";
 "tab.calendar" = "Kalender";
+"tab.gifts" = "Geschenke";
 "tab.settings" = "Einstellungen";
 
 "common.add" = "Hinzufügen";
@@ -54,7 +55,7 @@
 "friend.placeholder.add_music" = "Musik hinzufügen…";
 "friend.placeholder.add_movie_series" = "Film oder Serie hinzufügen…";
 "friend.placeholder.add_note" = "Notiz hinzufügen…";
-"friend.section.history" = "Treffen- / Ereignisverlauf";
+"friend.section.history" = "Treffen/Ereignisse";
 "friend.history.empty" = "Noch keine Treffen oder Ereignisse. Füge im Kalender eines hinzu.";
 "friend.history.show_all" = "Alle anzeigen (%d)";
 "friend.history.show_less" = "Weniger anzeigen";
@@ -79,6 +80,11 @@
 "meeting.section.past" = "Vergangen";
 "meeting.show_more" = "+%d weitere";
 "friend.gifts.gifted.section" = "Erledigt";
+"gifts.title" = "Geschenke";
+"gifts.search.placeholder" = "Geschenke, Notizen oder Personen suchen";
+"gifts.empty.hidden_gifted" = "Keine offenen Geschenkideen. Du kannst unten erledigte Geschenkideen einblenden.";
+"gifts.assignee.label" = "Person";
+"gifts.assignee.none" = "Keine Person zugeordnet";
 
 "friend.delete.button" = "Freund löschen";
 "friend.delete.title" = "%@ löschen?";
@@ -90,6 +96,7 @@
 "gift.edit.title" = "Geschenkidee bearbeiten";
 "gift.name" = "Name";
 "gift.note" = "Notiz";
+"gift.url" = "URL";
 "gift.already_gifted" = "Schon geschenkt";
 
 "list.edit_entry" = "Eintrag bearbeiten";
@@ -171,6 +178,7 @@
 "settings.reminder.birthdays" = "Geburtstage";
 "settings.reminder.meetings" = "Treffen";
 "settings.reminder.events" = "Ereignisse";
+"settings.reminder.time" = "Erinnerungszeit";
 "settings.reminder.long_no_meeting" = "Lange-nicht-getroffen-Erinnerung";
 "settings.reminder.post_note" = "Erinnerung zum Notiz-Hinzufügen nach Treffen";
 "settings.reminder.days" = "Erinnerungstage";
@@ -195,26 +203,51 @@
 "settings.about.header" = "Info";
 "settings.privacy.title" = "Datenschutz";
 
-"privacy.intro" = "FriendsApp verarbeitet deine Kontaktdaten lokal auf deinem Gerät.";
+"privacy.intro" = "Friend Notes verarbeitet deine Kontaktdaten lokal auf deinem Gerät.";
 "privacy.storage.title" = "Datenspeicherung";
 "privacy.storage.body" = "Name, Spitzname, Geburtstag, Tags, Notizen, Hobbys, Essen, Musik, Filme/Serien, Treffen, Ereignisse, Geschenkideen und Benachrichtigungs-Einstellungen.";
 "privacy.notifications.title" = "Benachrichtigungen";
-"privacy.notifications.body" = "Wenn aktiviert, nutzt FriendsApp lokale iOS-Benachrichtigungen. Die Planung erfolgt lokal auf dem Gerät.";
+"privacy.notifications.body" = "Wenn aktiviert, nutzt Friend Notes lokale iOS-Benachrichtigungen. Die Planung erfolgt lokal auf dem Gerät.";
 "privacy.sharing.title" = "Datenweitergabe";
 "privacy.sharing.body" = "Es erfolgt keine automatische Weitergabe deiner Daten an Dritte.";
 "privacy.deletion.title" = "Löschung";
 "privacy.deletion.body" = "Du kannst Kontakte, Treffen/Ereignisse und Inhalte jederzeit in der App löschen.";
 "privacy.updated" = "Stand: 26. März 2026";
 
+"onboarding.skip" = "Überspringen";
+"onboarding.back" = "Zurück";
+"onboarding.next" = "Weiter";
+"onboarding.start" = "Los geht's";
+"onboarding.step1.title" = "Willkommen bei Friend Notes";
+"onboarding.step1.message" = "Behalte wichtige Details zu deinen Kontakten an einem Ort.";
+"onboarding.step1.h1" = "Erstelle Freunde mit Tags, Geburtstagen und Notizen";
+"onboarding.step1.h2" = "Markiere Favoriten und halte Profile übersichtlich";
+"onboarding.step2.title" = "Treffen & Events planen";
+"onboarding.step2.message" = "Verwalte vergangene und kommende Zeit mit Freunden direkt im Kalender.";
+"onboarding.step2.h1" = "Lege Treffen/Events an und verknüpfe eine oder mehrere Personen";
+"onboarding.step2.h2" = "Erhalte Erinnerungen und springe aus Notifications direkt in Details";
+"onboarding.step3.title" = "Geschenkideen verwalten";
+"onboarding.step3.message" = "Sammle Ideen mit Notizen und Links und markiere Geschenke als erledigt.";
+"onboarding.step3.h1" = "Ordne Geschenke einer Person zu oder lasse sie ohne Zuordnung";
+"onboarding.step3.h2" = "Filtere offene/erledigte Ideen für einen klaren Überblick";
+"onboarding.step4.title" = "Passe alles an";
+"onboarding.step4.message" = "Stelle Erinnerungen und App-Verhalten jederzeit in den Einstellungen ein.";
+"onboarding.step4.h1" = "Steuere Reminder-Kategorien und Uhrzeit";
+"onboarding.step4.h2" = "Nutze Tags für eine schnellere Übersicht deiner Freunde";
+
 "notification.birthday.title" = "Geburtstag: %@";
 "notification.birthday.body" = "%@ hat bald Geburtstag.";
 "notification.long_no_meeting.title" = "Lange nicht getroffen";
 "notification.long_no_meeting.body" = "Du hast %@ seit %d Woche(n) nicht getroffen.";
-"notification.long_no_meeting.body.one" = "Du hast %@ seit 1 Woche nicht getroffen.";
-"notification.long_no_meeting.body.other" = "Du hast %@ seit %d Wochen nicht getroffen.";
+"notification.long_no_meeting.body.one" = "Du hast %@ seit 1 Woche nicht gesehen.";
+"notification.long_no_meeting.body.other" = "Du hast %@ seit %d Wochen nicht gesehen.";
 "notification.meeting.title" = "Treffen Erinnerung";
+"notification.meeting.body.no_friends" = "Du hast ein Treffen am %@.";
+"notification.meeting.body.with_friends" = "Du hast mit %@ ein Treffen am %@.";
 "notification.event.title" = "Ereignis Erinnerung";
-"notification.event.body.no_friends" = "%@ startet am %@.";
-"notification.event.body.with_friends" = "%@ mit %@ startet am %@.";
+"notification.event.body.no_friends" = "Dein Event \"%@\" startet am %@.";
+"notification.event.body.with_friends" = "Dein Event \"%@\" mit %@ startet am %@.";
 "notification.post_note.title" = "Notiz zum Treffen";
-"notification.post_note.body" = "Füge eine Notiz zum Treffen hinzu.";
+"notification.post_note.body.no_friends" = "Füge jetzt eine Notiz zu deinem Treffen hinzu.";
+"notification.post_note.body.with_friends" = "Füge jetzt eine Notiz zu deinem Treffen mit %@ hinzu.";
+"notification.target.missing" = "Der zugehörige Eintrag konnte nicht gefunden werden.";

@@ -12,7 +12,10 @@ struct FriendDetailView: View {
 
     @State private var showingDeleteAlert = false
     @State private var showingBirthdayPicker = false
-    @State private var birthdayPickerInitialDate = Date()
+    @State private var quickAddEntryCategory: QuickAddEntryCategory?
+    @State private var showingQuickAddMeeting = false
+    @State private var showingQuickAddEvent = false
+    @State private var showingQuickAddGiftIdea = false
     @State private var isContactEditing = false
     @FocusState private var focusedField: Field?
 
@@ -21,9 +24,61 @@ struct FriendDetailView: View {
         case firstName, lastName, nickname
     }
 
+    /// Supported quick-add entry categories from the detail toolbar menu.
+    private enum QuickAddEntryCategory: String, Identifiable {
+        case hobbies
+        case foods
+        case musics
+        case moviesSeries
+        case notes
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .hobbies:
+                return L10n.text("friend.section.hobbies", "Hobbies")
+            case .foods:
+                return L10n.text("friend.section.food", "Food")
+            case .musics:
+                return L10n.text("friend.section.music", "Music")
+            case .moviesSeries:
+                return L10n.text("friend.section.movies_series", "Movies / Series")
+            case .notes:
+                return L10n.text("friend.section.notes", "Notes")
+            }
+        }
+
+        var placeholder: String {
+            switch self {
+            case .hobbies:
+                return L10n.text("friend.placeholder.add_hobby", "Add hobby…")
+            case .foods:
+                return L10n.text("friend.placeholder.add_food", "Add food…")
+            case .musics:
+                return L10n.text("friend.placeholder.add_music", "Add music…")
+            case .moviesSeries:
+                return L10n.text("friend.placeholder.add_movie_series", "Add movie or series…")
+            case .notes:
+                return L10n.text("friend.placeholder.add_note", "Add note…")
+            }
+        }
+    }
+
     /// Decoded globally defined tag options available for selection.
     private var definedTags: [String] {
         AppTagStore.decode(definedTagsRaw)
+    }
+
+    /// Count of upcoming meetings/events linked to this friend.
+    private var upcomingMeetingsCount: Int {
+        let now = Date()
+        return friend.meetings.filter { $0.startDate > now }.count
+    }
+
+    /// Count of not-yet-gifted ideas linked to this friend.
+    private var openGiftIdeasCount: Int {
+        friend.giftIdeas.filter { !$0.isGifted }.count
     }
 
     var body: some View {
@@ -31,6 +86,22 @@ struct FriendDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { detailToolbar }
             .sheet(isPresented: $showingBirthdayPicker, content: birthdayPickerSheet)
+            .sheet(item: $quickAddEntryCategory) { category in
+                AddFriendEntrySheet(placeholder: category.placeholder) { entryTitle, note in
+                    addQuickEntry(title: entryTitle, note: note, category: category.rawValue)
+                }
+            }
+            .sheet(isPresented: $showingQuickAddMeeting) {
+                AddMeetingView(initialDate: Date(), preselectedFriends: [friend])
+            }
+            .sheet(isPresented: $showingQuickAddEvent) {
+                AddEventView(initialDate: Date(), preselectedFriends: [friend])
+            }
+            .sheet(isPresented: $showingQuickAddGiftIdea) {
+                AddGiftIdeaSheet { title, note, url in
+                    addQuickGiftIdea(title: title, note: note, url: url)
+                }
+            }
             .alert(L10n.text("friend.delete.title", "Delete %@?", friend.displayName), isPresented: $showingDeleteAlert) {
                 Button(L10n.text("common.delete", "Delete"), role: .destructive) {
                     DataMaintenance.pruneMeetingsAfterRemoving(friend: friend, in: modelContext)
@@ -145,9 +216,9 @@ struct FriendDetailView: View {
                 FriendMeetingsView(friend: friend)
             } label: {
                 categoryRow(
-                    title: L10n.text("friend.section.history", "Meetings & Events"),
+                    title: L10n.text("friend.section.history", "Meetings/Events"),
                     icon: "clock.arrow.circlepath",
-                    count: friend.meetings.count
+                    count: upcomingMeetingsCount
                 )
             }
             .buttonStyle(.plain)
@@ -158,7 +229,7 @@ struct FriendDetailView: View {
                 categoryRow(
                     title: L10n.text("friend.section.gift_ideas", "Gift Ideas"),
                     icon: "gift.fill",
-                    count: friend.giftIdeas.count
+                    count: openGiftIdeasCount
                 )
             }
             .buttonStyle(.plain)
@@ -193,6 +264,8 @@ struct FriendDetailView: View {
     /// Top bar controls for pinning and editing profile content.
     @ToolbarContentBuilder
     private var detailToolbar: some ToolbarContent {
+
+        // MARK: - Leading (Left)
         ToolbarItem(placement: .topBarLeading) {
             if isContactEditing {
                 Button {
@@ -201,28 +274,100 @@ struct FriendDetailView: View {
                     }
                 } label: {
                     Image(systemName: friend.isFavorite ? "star.fill" : "star")
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(friend.isFavorite ? AppTheme.accent : .secondary)
                 }
+                .accessibilityLabel("Favorite")
             }
         }
+
+        // MARK: - Trailing (Grouped)
         ToolbarItem(placement: .topBarTrailing) {
-            Button(isContactEditing ? L10n.text("common.done", "Done") : L10n.text("common.edit", "Edit")) {
+            Menu {
+                Section {
+                    Button {
+                        quickAddEntryCategory = .hobbies
+                    } label: {
+                        Label(L10n.text("friend.section.hobbies", "Hobbies"), systemImage: "figure.walk")
+                    }
+
+                    Button {
+                        quickAddEntryCategory = .foods
+                    } label: {
+                        Label(L10n.text("friend.section.food", "Food"), systemImage: "fork.knife")
+                    }
+
+                    Button {
+                        quickAddEntryCategory = .musics
+                    } label: {
+                        Label(L10n.text("friend.section.music", "Music"), systemImage: "music.note")
+                    }
+
+                    Button {
+                        quickAddEntryCategory = .moviesSeries
+                    } label: {
+                        Label(L10n.text("friend.section.movies_series", "Movies / Series"), systemImage: "film.fill")
+                    }
+
+                    Button {
+                        quickAddEntryCategory = .notes
+                    } label: {
+                        Label(L10n.text("friend.section.notes", "Notes"), systemImage: "note.text")
+                    }
+                }
+
+                Section {
+                    Button {
+                        showingQuickAddMeeting = true
+                    } label: {
+                        Label(L10n.text("meeting.new.title", "New Meeting"), systemImage: "person.2.fill")
+                    }
+
+                    Button {
+                        showingQuickAddEvent = true
+                    } label: {
+                        Label(L10n.text("event.new.title", "New Event"), systemImage: "flag.fill")
+                    }
+
+                    Button {
+                        showingQuickAddGiftIdea = true
+                    } label: {
+                        Label(L10n.text("gift.new.title", "New Gift Idea"), systemImage: "gift.fill")
+                    }
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.body.weight(.semibold))
+            }
+            .accessibilityLabel(L10n.text("common.add", "Add"))
+        }
+
+        // MARK: - Primary Action (separate right button)
+        ToolbarItem(placement: .primaryAction) {
+            Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isContactEditing.toggle()
                     if !isContactEditing {
                         focusedField = nil
                     }
                 }
+            } label: {
+                Image(systemName: isContactEditing ? "checkmark" : "square.and.pencil")
+                    .font(.body.weight(.semibold))
             }
-            .fontWeight(.semibold)
+            .accessibilityLabel(
+                isContactEditing
+                    ? L10n.text("common.done", "Done")
+                    : L10n.text("common.edit", "Edit")
+            )
         }
-    }
+    }   
 
     /// Sheet content for editing the birthday value.
     private func birthdayPickerSheet() -> some View {
         return BirthdayPickerSheet(
             title: L10n.text("friend.section.birthday", "Birthday"),
-            initialDate: birthdayPickerInitialDate,
+            initialDate: friend.birthday ?? Date(),
             onSave: { selectedDate in
                 friend.birthday = selectedDate
             }
@@ -300,11 +445,6 @@ struct FriendDetailView: View {
                 if friend.birthday != nil {
                     if isContactEditing {
                         Button {
-                            if let bday = friend.birthday {
-                                birthdayPickerInitialDate = bday
-                            } else {
-                                birthdayPickerInitialDate = Date()
-                            }
                             showingBirthdayPicker = true
                         } label: {
                             Text((friend.birthday ?? Date()).formatted(date: .long, time: .omitted))
@@ -326,7 +466,6 @@ struct FriendDetailView: View {
                 } else {
                     if isContactEditing {
                         Button {
-                            birthdayPickerInitialDate = Date()
                             showingBirthdayPicker = true
                         } label: {
                             Label(L10n.text("friend.add_birthday", "Add Birthday"), systemImage: "plus.circle")
@@ -442,6 +581,34 @@ struct FriendDetailView: View {
         }
     }
 
+    /// Adds a new category entry directly from the toolbar quick-add menu.
+    private func addQuickEntry(title: String, note: String, category: String) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        let order = friend.entryList(for: category).count
+        let entry = FriendEntry(
+            title: trimmedTitle,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            category: category,
+            order: order
+        )
+        modelContext.insert(entry)
+        friend.entries.append(entry)
+    }
+
+    /// Adds a new gift idea preassigned to the current friend.
+    private func addQuickGiftIdea(title: String, note: String, url: String) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        let idea = GiftIdea(
+            title: trimmedTitle,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            url: url.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        modelContext.insert(idea)
+        friend.giftIdeas.append(idea)
+    }
+
 }
 
 
@@ -469,7 +636,6 @@ struct AddFriendView: View {
     @State private var isNotesExpanded = false
     @State private var birthday: Date? = nil
     @State private var showingBirthdayPicker = false
-    @State private var birthdayPickerInitialDate = Date()
 
     @FocusState private var focusedField: Field?
 
@@ -521,8 +687,11 @@ struct AddFriendView: View {
                     Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.add", "Add")) { save() }
-                        .fontWeight(.semibold)
+                    Button { save() } label: {
+                        Image(systemName: "plus")
+                            .font(.body.weight(.semibold))
+                    }
+                        .accessibilityLabel(L10n.text("common.add", "Add"))
                         .disabled(firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                   && lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -530,7 +699,7 @@ struct AddFriendView: View {
             .sheet(isPresented: $showingBirthdayPicker) {
                 BirthdayPickerSheet(
                     title: L10n.text("friend.section.birthday", "Birthday"),
-                    initialDate: birthdayPickerInitialDate,
+                    initialDate: birthday ?? Date(),
                     onSave: { selectedDate in
                         birthday = selectedDate
                     }
@@ -595,7 +764,6 @@ struct AddFriendView: View {
             HStack {
                 if birthday != nil {
                     Button {
-                        birthdayPickerInitialDate = birthday ?? Date()
                         showingBirthdayPicker = true
                     } label: {
                         Text((birthday ?? Date()).formatted(date: .long, time: .omitted))
@@ -610,7 +778,6 @@ struct AddFriendView: View {
                     }
                 } else {
                     Button {
-                        birthdayPickerInitialDate = Date()
                         showingBirthdayPicker = true
                     } label: {
                         Label(L10n.text("friend.add_birthday", "Add Birthday"), systemImage: "plus.circle")
@@ -893,6 +1060,15 @@ struct EditGiftIdeaSheet: View {
                         .padding(.vertical, 12)
                         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
+                    TextField(L10n.text("gift.url", "URL"), text: $idea.url)
+                        .textFieldStyle(.plain)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
                     Toggle(L10n.text("gift.already_gifted", "Already gifted"), isOn: $idea.isGifted)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
@@ -922,12 +1098,14 @@ struct AddGiftIdeaSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var note = ""
+    @State private var url = ""
     @FocusState private var focusedField: Field?
 
-    let onSave: (String, String) -> Void
+    let onSave: (String, String, String) -> Void
 
     private enum Field {
         case title
+        case url
         case note
     }
 
@@ -938,6 +1116,18 @@ struct AddGiftIdeaSheet: View {
                     TextField(L10n.text("gift.name", "Name"), text: $title)
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .title)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .url }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    TextField(L10n.text("gift.url", "URL"), text: $url)
+                        .textFieldStyle(.plain)
+                        .focused($focusedField, equals: .url)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
                         .submitLabel(.next)
                         .onSubmit { focusedField = .note }
                         .padding(.horizontal, 14)
@@ -966,18 +1156,16 @@ struct AddGiftIdeaSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.text("common.save", "Save")) {
-                        onSave(title, note)
+                        onSave(title, note, url)
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    HStack {
-                        Spacer()
-                        Button(L10n.text("common.done", "Done")) {
-                            focusedField = nil
-                            Keyboard.dismiss()
-                        }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L10n.text("common.done", "Done")) {
+                        focusedField = nil
+                        Keyboard.dismiss()
                     }
                 }
             }
