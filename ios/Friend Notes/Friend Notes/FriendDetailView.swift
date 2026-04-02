@@ -857,25 +857,38 @@ struct AddFriendView: View {
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled()
-            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { cancelCreation() }
+                    Button(L10n.text("common.cancel", "Cancel")) {
+                        cancelCreation()
+                    }
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button(L10n.text("common.save", "Save")) { save() }
                         .fontWeight(.semibold)
                         .disabled(!canSave)
                 }
-                
+
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button(L10n.text("common.done", "Done")) {
                         focusedField = nil
                         Keyboard.dismiss()
                     }
                 }
+            }
+            .sheet(isPresented: $showingBirthdayPicker) {
+                BirthdayPickerSheet(
+                    title: L10n.text("friend.section.birthday", "Birthday"),
+                    initialDate: draftFriend?.birthday ?? Date(),
+                    onSave: { selectedDate in
+                        draftFriend?.birthday = selectedDate
+                    }
+                )
+            }
+            .onAppear {
+                initializeDraftFriendIfNeeded()
             }
         }
         .appScreenBackground()
@@ -1113,7 +1126,7 @@ struct AddFriendView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 12)
         )
     }
 
