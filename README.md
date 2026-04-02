@@ -28,9 +28,9 @@ Friend Notes is designed as a personal relationship manager that stays lightweig
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/ios/screenshot_1.png" alt="Friends list and relationship overview" width="220" />
-  <img src="docs/screenshots/ios/screenshot_2.png" alt="Upcoming calendar entries and planning" width="220" />
-  <img src="docs/screenshots/ios/screenshot_3.png" alt="Gift ideas with open and completed states" width="220" />
+  <img src="docs/screenshots/ios/screenshot_1.png" alt="Friends list and relationship overview" width="250" />
+  <img src="docs/screenshots/ios/screenshot_2.png" alt="Upcoming calendar entries and planning" width="250" />
+  <img src="docs/screenshots/ios/screenshot_3.png" alt="Gift ideas with open and completed states" width="250" />
 </p>
 
 ## Tech Stack
