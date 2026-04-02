@@ -377,35 +377,6 @@ struct AppSettingsView: View {
     }
 }
 
-// MARK: - Friend Settings
-
-/// Minimal per-friend settings screen for display-related toggles.
-struct FriendSettingsView: View {
-    @Bindable var friend: Friend
-
-    var body: some View {
-        List {
-            displaySection
-                .listRowBackground(Color.clear)
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
-        .compositingGroup()
-        .background(AppGradientBackground())
-        .navigationTitle(L10n.text("friend.settings.title", "Friend Settings"))
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    /// Section containing presentation preferences for a friend.
-    private var displaySection: some View {
-        Section {
-            Toggle(L10n.text("friend.settings.pin", "Pin to Top"), isOn: $friend.isFavorite)
-        } header: {
-            Text(L10n.text("friend.settings.display", "Display"))
-        }
-    }
-}
 
 #Preview {
     AppSettingsView()

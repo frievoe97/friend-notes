@@ -2,33 +2,6 @@ import Foundation
 import UserNotifications
 import SwiftData
 
-/// Global notification preferences used when scheduling local reminders.
-struct AppNotificationSettings {
-    /// Master switch for all app-managed notifications.
-    var notificationsEnabled: Bool
-    /// Enables birthday reminders.
-    var globalNotifyBirthday: Bool
-    /// Number of days before birthday reminders.
-    var globalBirthdayReminderDays: Int
-    /// Enables meeting reminders.
-    var globalNotifyMeetings: Bool
-    /// Number of days before meeting reminders.
-    var globalMeetingReminderDays: Int
-    /// Enables event reminders.
-    var globalNotifyEvents: Bool
-    /// Number of days before event reminders.
-    var globalEventReminderDays: Int
-    /// Enables "long time no meeting" reminders.
-    var globalNotifyLongNoMeeting: Bool
-    /// Number of weeks before triggering "long time no meeting".
-    var globalLongNoMeetingWeeks: Int
-    /// Time of day (minutes since midnight) when reminders should fire.
-    var globalReminderTimeMinutes: Int
-    /// Enables reminder to add a note after a meeting ends.
-    var globalNotifyPostMeetingNote: Bool
-}
-
-/// Schedules and manages app-owned local notifications for friends and timeline entries.
 final class NotificationService {
     /// Shared singleton instance used across the app lifecycle.
     static let shared = NotificationService()
@@ -184,21 +157,21 @@ final class NotificationService {
 
                 let content = UNMutableNotificationContent()
                 content.title = meeting.kind == .meeting
-                    ? L10n.text("notification.meeting.title", "Treffen Erinnerung")
-                    : L10n.text("notification.event.title", "Ereignis Erinnerung")
+                    ? L10n.text("notification.meeting.title", "Meeting Reminder")
+                    : L10n.text("notification.event.title", "Event Reminder")
                 let startText = meeting.startDate.formatted(date: .abbreviated, time: .shortened)
                 let participantNames = localizedNameList(meeting.friends.map(\.displayName))
                 if meeting.kind == .meeting {
                     if participantNames.isEmpty {
                         content.body = L10n.text(
                             "notification.meeting.body.no_friends",
-                            "Du hast ein Treffen am %@.",
+                            "You have a meeting on %@.",
                             startText
                         )
                     } else {
                         content.body = L10n.text(
                             "notification.meeting.body.with_friends",
-                            "Du hast mit %@ ein Treffen am %@.",
+                            "You have a meeting with %@ on %@.",
                             participantNames,
                             startText
                         )
@@ -208,14 +181,14 @@ final class NotificationService {
                     if participantNames.isEmpty {
                         content.body = L10n.text(
                             "notification.event.body.no_friends",
-                            "Dein Event \"%@\" startet am %@.",
+                            "Your event \"%@\" starts on %@.",
                             subject,
                             startText
                         )
                     } else {
                         content.body = L10n.text(
                             "notification.event.body.with_friends",
-                            "Dein Event \"%@\" mit %@ startet am %@.",
+                            "Your event \"%@\" with %@ starts on %@.",
                             subject,
                             participantNames,
                             startText
@@ -245,16 +218,16 @@ final class NotificationService {
                     calendar: calendar
                    ) {
                     let content = UNMutableNotificationContent()
-                    content.title = L10n.text("notification.post_note.title", "Notiz zum Treffen")
+                    content.title = L10n.text("notification.post_note.title", "Meeting Note Reminder")
                     let participantNames = localizedNameList(meeting.friends.map(\.displayName))
                     content.body = participantNames.isEmpty
                         ? L10n.text(
                             "notification.post_note.body.no_friends",
-                            "Füge jetzt eine Notiz zu deinem Treffen hinzu."
+                            "Add a note for your meeting now."
                         )
                         : L10n.text(
                             "notification.post_note.body.with_friends",
-                            "Füge jetzt eine Notiz zu deinem Treffen mit %@ hinzu.",
+                            "Add a note for your meeting with %@ now.",
                             participantNames
                         )
                     content.sound = .default
