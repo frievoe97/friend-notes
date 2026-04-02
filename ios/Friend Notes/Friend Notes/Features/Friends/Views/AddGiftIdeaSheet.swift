@@ -4,14 +4,23 @@ import SwiftUI
 
 /// Sheet for creating a new gift idea.
 struct AddGiftIdeaSheet: View {
+    /// Uses environment dismissal to close after save/cancel.
     @Environment(\.dismiss) private var dismiss
+    /// Local title draft. Required before save is enabled.
     @State private var title = ""
+    /// Local optional note draft.
     @State private var note = ""
+    /// Local optional URL draft.
     @State private var url = ""
+    /// Tracks keyboard focus for next/done field transitions.
     @FocusState private var focusedField: Field?
 
+    /// Callback that receives raw form values when save is tapped.
+    ///
+    /// - Important: The caller owns validation beyond required title and model persistence.
     let onSave: (String, String, String) -> Void
 
+    /// Focus targets used by sequential keyboard navigation.
     private enum Field {
         case title
         case url
@@ -91,6 +100,10 @@ struct AddGiftIdeaSheet: View {
         .appScreenBackground()
     }
 
+    /// Applies the shared label style used above form inputs.
+    ///
+    /// - Parameter text: Label text rendered above an input.
+    /// - Returns: Styled label view.
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.semibold))

@@ -3,22 +3,37 @@ import SwiftData
 
 /// Gift detail sheet that starts in read mode and switches to edit mode on demand.
 struct GiftIdeaDetailSheet: View {
+    /// Uses environment dismissal for close/delete flows.
     @Environment(\.dismiss) private var dismiss
+    /// SwiftData context used for destructive delete persistence.
     @Environment(\.modelContext) private var modelContext
+    /// Friend list used to resolve assignee edits.
     @Query(sort: [SortDescriptor(\Friend.lastName), SortDescriptor(\Friend.firstName)]) private var allFriends: [Friend]
+    /// Bound persisted gift idea displayed and edited by this sheet.
     @Bindable var idea: GiftIdea
 
+    /// Enables assignee editing when the sheet is used from global gift contexts.
     let allowsAssigneeEditing: Bool
 
+    /// Local mode state to switch between read and edit presentation.
     @State private var mode: Mode = .view
+    /// Local title draft to isolate edits until save.
     @State private var draftTitle: String
+    /// Local note draft to isolate edits until save.
     @State private var draftNote: String
+    /// Local URL draft to isolate edits until save.
     @State private var draftURL: String
+    /// Local gifted flag draft to isolate edits until save.
     @State private var draftIsGifted: Bool
+    /// Local assignee selection draft represented by persistent identifier.
     @State private var selectedFriendID: PersistentIdentifier?
+    /// Controls assignee picker presentation in edit mode.
     @State private var showingAssigneePicker = false
+    /// Controls destructive delete confirmation.
     @State private var showingDeleteAlert = false
+    /// Holds the URL opened in the in-app browser sheet.
     @State private var browserURL: URL?
+    /// Tracks keyboard focus for title/url/note input flow.
     @FocusState private var focusedField: Field?
 
     private enum Mode {
@@ -32,8 +47,15 @@ struct GiftIdeaDetailSheet: View {
         case note
     }
 
+    /// Shared minimum height used by multiline note cards across read/edit modes.
     private let noteCardMinHeight: CGFloat = 120
 
+    /// Creates a detail sheet backed by one persisted idea.
+    ///
+    /// - Parameters:
+    ///   - idea: Persisted gift idea displayed by this sheet.
+    ///   - allowsAssigneeEditing: Controls whether assignee editing UI is shown.
+    /// - Note: Draft state is seeded from `idea` so cancel can fully revert edit mode.
     init(idea: GiftIdea, allowsAssigneeEditing: Bool = true) {
         self.idea = idea
         self.allowsAssigneeEditing = allowsAssigneeEditing
@@ -44,21 +66,25 @@ struct GiftIdeaDetailSheet: View {
         _selectedFriendID = State(initialValue: idea.friend?.persistentModelID)
     }
 
+    /// Indicates whether editable form controls should be shown.
     private var isEditing: Bool {
         mode == .edit
     }
 
+    /// Resolves the currently selected assignee draft to a full friend model.
     private var selectedFriend: Friend? {
         guard let selectedFriendID else { return nil }
         return allFriends.first(where: { $0.persistentModelID == selectedFriendID })
     }
 
+    /// Navigation title derived from current mode-specific title source.
     private var titleForNavigation: String {
         let source = isEditing ? draftTitle : idea.title
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? L10n.text("gift.new.title", "New Gift Idea") : trimmed
     }
 
+    /// Enables save only when the required title is non-empty.
     private var canSave: Bool {
         !draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -112,6 +138,7 @@ struct GiftIdeaDetailSheet: View {
     }
 
     @ViewBuilder
+    /// Renders read-only card content for view mode.
     private var readOnlyContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             fieldLabel(L10n.text("gift.name", "Name"))
@@ -137,6 +164,7 @@ struct GiftIdeaDetailSheet: View {
     }
 
     @ViewBuilder
+    /// Renders editable form controls for edit mode.
     private var editableContent: some View {
         let canClearTitle = !draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         VStack(alignment: .leading, spacing: 6) {
@@ -253,6 +281,7 @@ struct GiftIdeaDetailSheet: View {
     }
 
     @ToolbarContentBuilder
+    /// Builds toolbar actions for view and edit modes.
     private var toolbarContent: some ToolbarContent {
         if isEditing {
             ToolbarItem(placement: .cancellationAction) {
@@ -292,6 +321,9 @@ struct GiftIdeaDetailSheet: View {
         }
     }
 
+    /// Enters edit mode and refreshes drafts from persisted model values.
+    ///
+    /// - Side Effects: Mutates local draft state and presentation mode.
     private func beginEditing() {
         draftTitle = idea.title
         draftNote = idea.note
@@ -301,6 +333,9 @@ struct GiftIdeaDetailSheet: View {
         mode = .edit
     }
 
+    /// Leaves edit mode without persisting draft changes.
+    ///
+    /// - Side Effects: Resets drafts, clears keyboard focus, and dismisses keyboard.
     private func cancelEditing() {
         draftTitle = idea.title
         draftNote = idea.note
@@ -312,6 +347,9 @@ struct GiftIdeaDetailSheet: View {
         mode = .view
     }
 
+    /// Persists current drafts into the bound model and returns to view mode.
+    ///
+    /// - Important: Mutates persisted `idea` fields directly via `@Bindable`.
     private func saveChanges() {
         let trimmedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
@@ -330,6 +368,9 @@ struct GiftIdeaDetailSheet: View {
         mode = .view
     }
 
+    /// Deletes the bound gift idea from SwiftData and dismisses the sheet.
+    ///
+    /// - Side Effects: Removes persisted data and triggers context save.
     private func deleteIdea() {
         focusedField = nil
         Keyboard.dismiss()
@@ -342,12 +383,20 @@ struct GiftIdeaDetailSheet: View {
         dismiss()
     }
 
+    /// Applies shared field-label styling.
+    ///
+    /// - Parameter text: Label text rendered above a card.
+    /// - Returns: Styled label view.
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
     }
 
+    /// Renders a single-line read-only value card.
+    ///
+    /// - Parameter value: Value to display.
+    /// - Returns: Read-only card with placeholder dash when empty.
     private func readOnlyRow(value: String) -> some View {
         Text(value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "–" : value)
             .font(.body)
@@ -358,6 +407,10 @@ struct GiftIdeaDetailSheet: View {
         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    /// Renders a multiline read-only card for note content.
+    ///
+    /// - Parameter value: Trimmed note value.
+    /// - Returns: Multiline card with placeholder dash when empty.
     private func readOnlyMultilineRow(value: String) -> some View {
         Text(value.isEmpty ? "–" : value)
             .font(.body)
@@ -370,6 +423,9 @@ struct GiftIdeaDetailSheet: View {
     }
 
     @ViewBuilder
+    /// Renders URL content as a tappable in-app browser action when valid.
+    ///
+    /// - Parameter rawURL: Raw URL text stored on the idea.
     private func readOnlyURLRow(rawURL: String) -> some View {
         let trimmed = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedURL = normalizedURL(from: trimmed)
@@ -405,6 +461,7 @@ struct GiftIdeaDetailSheet: View {
         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    /// Read-only assignee card used in view mode.
     private var readOnlyAssigneeRow: some View {
         HStack(spacing: 10) {
             if let friend = idea.friend {
@@ -430,6 +487,7 @@ struct GiftIdeaDetailSheet: View {
         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    /// Editable assignee selector used in edit mode.
     private var assignmentMenu: some View {
         Button {
             showingAssigneePicker = true
@@ -461,6 +519,10 @@ struct GiftIdeaDetailSheet: View {
         .buttonStyle(.plain)
     }
 
+    /// Normalizes raw URL text into a browser-openable URL.
+    ///
+    /// - Parameter rawValue: Raw user-provided URL string.
+    /// - Returns: URL with existing scheme preserved, or `https://` prepended when missing.
     private func normalizedURL(from rawValue: String) -> URL? {
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }

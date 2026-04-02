@@ -1,13 +1,21 @@
 import SwiftUI
 import SwiftData
 
+/// Manages gift ideas that belong to a single friend profile.
+///
+/// - Note: The view applies local presentation state while all data mutations flow through SwiftData models.
 struct FriendGiftsView: View {
+    /// Bound friend model that owns the shown gift ideas.
     @Bindable var friend: Friend
+    /// SwiftData context used for inserts and deletes triggered from this screen.
     @Environment(\.modelContext) private var modelContext
 
+    /// Controls add-sheet presentation.
     @State private var showingAddGiftIdea = false
+    /// Holds the selected gift for detail-sheet presentation.
     @State private var selectedGiftIdea: GiftIdea?
 
+    /// Bridges optional selected idea to boolean sheet presentation.
     private var detailSheetBinding: Binding<Bool> {
         Binding(
             get: { selectedGiftIdea != nil },
@@ -15,11 +23,14 @@ struct FriendGiftsView: View {
         )
     }
 
+    /// Stable descending order by creation timestamp.
     private var sorted: [GiftIdea] {
         friend.giftIdeas.sorted { $0.createdAt > $1.createdAt }
     }
 
+    /// Ideas that still need to be gifted.
     private var openIdeas: [GiftIdea] { sorted.filter { !$0.isGifted } }
+    /// Ideas already marked as completed.
     private var giftedIdeas: [GiftIdea] { sorted.filter(\.isGifted) }
 
     var body: some View {
@@ -50,6 +61,7 @@ struct FriendGiftsView: View {
         }
     }
 
+    /// Renders the grouped gift list with an empty-state fallback.
     private var giftList: some View {
         List {
             openSection
@@ -72,6 +84,7 @@ struct FriendGiftsView: View {
     }
 
     @ViewBuilder
+    /// Renders the active/open gift section.
     private var openSection: some View {
         if !openIdeas.isEmpty {
             Section {
@@ -86,6 +99,7 @@ struct FriendGiftsView: View {
     }
 
     @ViewBuilder
+    /// Renders the completed gift section.
     private var completedSection: some View {
         if !giftedIdeas.isEmpty {
             Section(L10n.text("friend.gifts.gifted.section", "Completed")) {
@@ -100,6 +114,9 @@ struct FriendGiftsView: View {
     }
 
     @ViewBuilder
+    /// Renders one gift row with toggle and detail-navigation affordance.
+    ///
+    /// - Parameter idea: Gift idea displayed in the row.
     private func giftRow(_ idea: GiftIdea) -> some View {
         HStack(spacing: 14) {
             Button {
@@ -151,6 +168,13 @@ struct FriendGiftsView: View {
         .onTapGesture { selectedGiftIdea = idea }
     }
 
+    /// Creates and attaches a new gift idea to the bound friend.
+    ///
+    /// - Parameters:
+    ///   - title: Raw title input from the add sheet.
+    ///   - note: Raw optional note input.
+    ///   - url: Raw optional URL input.
+    /// - Important: Inserts into `modelContext` and mutates `friend.giftIdeas`.
     private func addGiftIdea(title: String, note: String, url: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }

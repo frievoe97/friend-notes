@@ -4,11 +4,17 @@ import SwiftUI
 
 /// Single calendar day cell with selection/today state and dot indicators.
 struct DayCell: View {
+    /// Calendar day represented by this cell.
     let date: Date
+    /// Indicates whether the user selected this day.
     let isSelected: Bool
+    /// Indicates whether the cell represents the current day.
     let isToday: Bool
+    /// Indicates whether at least one meeting exists on this day.
     let hasMeeting: Bool
+    /// Indicates whether at least one event exists on this day.
     let hasEvent: Bool
+    /// Indicates whether at least one birthday exists on this day.
     let hasBirthday: Bool
 
     var body: some View {

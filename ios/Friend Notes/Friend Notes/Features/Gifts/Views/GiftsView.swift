@@ -3,17 +3,26 @@ import SwiftData
 
 /// Global gift hub listing all gift ideas across the app.
 struct GiftsView: View {
+    /// SwiftData context used for delete operations triggered from list rows.
     @Environment(\.modelContext) private var modelContext
+    /// Live query of all gift ideas, used as source data for search and sections.
     @Query(sort: [SortDescriptor(\GiftIdea.createdAt, order: .reverse)]) private var giftIdeas: [GiftIdea]
 
+    /// Presents the global add-gift sheet.
     @State private var showingAddGiftIdea = false
+    /// Holds the selected gift idea for detail-sheet presentation.
     @State private var selectedGiftIdea: GiftIdea?
+    /// Controls expansion of the completed section in non-search mode.
     @State private var isGiftedExpanded = false
+    /// Controls expansion of the open section preview in non-search mode.
     @State private var showAllOpen = false
+    /// Search query bound to the native `.searchable` field.
     @State private var searchText = ""
 
+    /// Maximum number of open ideas shown before "show all" expands the section.
     private let openPreviewLimit = 5
 
+    /// Bridges optional selected idea state to boolean sheet presentation.
     private var detailSheetBinding: Binding<Bool> {
         Binding(
             get: { selectedGiftIdea != nil },
@@ -21,6 +30,7 @@ struct GiftsView: View {
         )
     }
 
+    /// Deterministic ordering used as base for sectioning and search output.
     private var sortedIdeas: [GiftIdea] {
         giftIdeas.sorted {
             if $0.createdAt != $1.createdAt {
@@ -30,14 +40,17 @@ struct GiftsView: View {
         }
     }
 
+    /// Search text normalized for empty checks and matching.
     private var trimmedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Indicates whether the user currently filters the list via search.
     private var isSearching: Bool {
         !trimmedSearchText.isEmpty
     }
 
+    /// Search-filtered ideas using title, note, URL, and assignee name.
     private var filteredIdeas: [GiftIdea] {
         guard isSearching else { return sortedIdeas }
         return sortedIdeas.filter { idea in
@@ -50,13 +63,19 @@ struct GiftsView: View {
         }
     }
 
+    /// Non-gifted subset used by the open section.
     private var openIdeas: [GiftIdea] { filteredIdeas.filter { !$0.isGifted } }
+    /// Gifted subset used by the completed section.
     private var giftedIdeas: [GiftIdea] { filteredIdeas.filter(\.isGifted) }
 
+    /// Open ideas currently visible after preview/expand logic.
     private var visibleOpenIdeas: [GiftIdea] {
         (showAllOpen || isSearching) ? openIdeas : Array(openIdeas.prefix(openPreviewLimit))
     }
 
+    /// Effective expansion state for completed ideas.
+    ///
+    /// - Note: Search mode always shows all matching completed items.
     private var giftedExpandedForDisplay: Bool {
         isSearching || isGiftedExpanded
     }
@@ -90,6 +109,7 @@ struct GiftsView: View {
         }
     }
 
+    /// Renders the searchable gift list and relevant empty states.
     private var giftList: some View {
         List {
             openSection
@@ -115,6 +135,7 @@ struct GiftsView: View {
     }
 
     @ViewBuilder
+    /// Renders open ideas with optional preview expansion controls.
     private var openSection: some View {
         if !openIdeas.isEmpty {
             Section(L10n.text("statistics.gifts.open", "Open")) {
@@ -158,6 +179,7 @@ struct GiftsView: View {
     }
 
     @ViewBuilder
+    /// Renders completed ideas with collapsible behavior outside search mode.
     private var giftedSection: some View {
         if !giftedIdeas.isEmpty {
             Section {
@@ -190,6 +212,9 @@ struct GiftsView: View {
     }
 
     @ViewBuilder
+    /// Renders one gift row with completion toggle and detail navigation.
+    ///
+    /// - Parameter idea: Gift idea displayed in the list.
     private func giftRow(_ idea: GiftIdea) -> some View {
         HStack(spacing: 14) {
             Button {
@@ -252,23 +277,34 @@ struct GiftsView: View {
 
 /// Sheet used to create a new global gift idea with optional friend assignment.
 private struct AddGlobalGiftIdeaSheet: View {
+    /// Uses environment dismissal after save or cancel.
     @Environment(\.dismiss) private var dismiss
+    /// SwiftData context used for insert and explicit save.
     @Environment(\.modelContext) private var modelContext
+    /// Friend list used for optional assignee selection.
     @Query(sort: [SortDescriptor(\Friend.lastName), SortDescriptor(\Friend.firstName)]) private var allFriends: [Friend]
 
+    /// Local required title draft.
     @State private var title = ""
+    /// Local optional note draft.
     @State private var note = ""
+    /// Local optional URL draft.
     @State private var url = ""
+    /// Selected optional assignee represented by persistent identifier.
     @State private var selectedFriendID: PersistentIdentifier?
+    /// Controls assignee picker sheet presentation.
     @State private var showingAssigneePicker = false
+    /// Tracks keyboard focus to support next/done field flow.
     @FocusState private var focusedField: Field?
 
+    /// Focus targets for keyboard navigation.
     private enum Field {
         case title
         case url
         case note
     }
 
+    /// Resolves the selected friend from persisted identifier state.
     private var selectedFriend: Friend? {
         guard let selectedFriendID else { return nil }
         return allFriends.first(where: { $0.persistentModelID == selectedFriendID })
@@ -358,12 +394,17 @@ private struct AddGlobalGiftIdeaSheet: View {
         }
     }
 
+    /// Applies shared field-label styling for the form.
+    ///
+    /// - Parameter text: Label text rendered above an input.
+    /// - Returns: Styled label view.
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
     }
 
+    /// Opens a picker that assigns one friend or leaves the gift unassigned.
     private var assignmentMenu: some View {
         Button {
             showingAssigneePicker = true
@@ -395,6 +436,9 @@ private struct AddGlobalGiftIdeaSheet: View {
         .buttonStyle(.plain)
     }
 
+    /// Persists a new global gift idea and optionally links it to a friend.
+    ///
+    /// - Important: This method inserts into `modelContext` and performs an explicit `save()`.
     private func save() {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }

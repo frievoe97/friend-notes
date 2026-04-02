@@ -1,15 +1,27 @@
 import SwiftUI
 import SwiftData
 
+/// Creates a new friend entry for a category-specific subpage.
+///
+/// - Note: The sheet keeps edits in local `@State` and forwards normalized input through `onSave`.
 struct AddFriendEntrySheet: View {
+    /// Uses environment dismissal so the presenting view controls sheet lifetime.
     @Environment(\.dismiss) private var dismiss
+    /// Local draft for the required title field. Persisted only after explicit save.
     @State private var title = ""
+    /// Local draft for the optional note field.
     @State private var note = ""
+    /// Tracks keyboard focus to drive next/done navigation between fields.
     @FocusState private var focusedField: Field?
 
+    /// Placeholder shown for category-specific guidance in the title input.
     let placeholder: String
+    /// Callback that commits user input in the parent context.
+    ///
+    /// - Important: The caller is responsible for model mutation and persistence.
     let onSave: (String, String) -> Void
 
+    /// Focus targets used by the sheet input flow.
     private enum Field { case title, note }
 
     var body: some View {
@@ -70,12 +82,13 @@ struct AddFriendEntrySheet: View {
         .appScreenBackground()
     }
 
+    /// Applies a shared label style for entry form fields.
+    ///
+    /// - Parameter text: Field title rendered above an input.
+    /// - Returns: Styled field label view.
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
     }
 }
-
-// MARK: - Edit Entry Sheet
-

@@ -2,15 +2,23 @@ import Foundation
 import UserNotifications
 import SwiftData
 
+/// Schedules and manages all app-owned local notifications.
+///
+/// - Important: This service only touches requests whose identifiers start with the internal prefix.
 final class NotificationService {
     /// Shared singleton instance used across the app lifecycle.
     static let shared = NotificationService()
 
+    /// System notification center used for authorization, scheduling, and cleanup.
     private let center = UNUserNotificationCenter.current()
+    /// Identifier prefix used to scope this service's notification ownership.
     private let prefix = "friendsapp."
+    /// Maximum lag (seconds) tolerated for same-minute catch-up scheduling.
     private let reminderCatchUpGraceSeconds: TimeInterval = 120
+    /// Delay added to immediate catch-up reminders to avoid firing at the exact scheduling tick.
     private let immediateCatchUpDelaySeconds: TimeInterval = 6
 
+    /// Enforces singleton usage.
     private init() {}
 
     /// Requests notification authorization if needed.
@@ -421,7 +429,7 @@ final class NotificationService {
         ]
     }
 
-    /// Returns a localized natural language list (e.g. "A, B und C").
+    /// Returns a localized natural-language list (for example "A, B, and C").
     private func localizedNameList(_ names: [String]) -> String {
         let cleanedNames = names
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

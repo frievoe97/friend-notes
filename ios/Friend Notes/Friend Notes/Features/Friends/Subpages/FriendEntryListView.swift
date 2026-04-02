@@ -5,21 +5,31 @@ import SwiftData
 
 /// Sub-page listing entries for a single category (e.g. hobbies, food).
 struct FriendEntryListView: View {
+    /// Bound friend model that owns the displayed category entries.
     @Bindable var friend: Friend
+    /// SwiftData context used for inserts and deletes triggered by this screen.
     @Environment(\.modelContext) private var modelContext
 
+    /// Localized navigation title for this category.
     let title: String
+    /// SF Symbol used by the empty state.
     let icon: String
+    /// Persisted category key used for filtering and creation.
     let category: String
+    /// Category-specific placeholder passed to the add sheet.
     let addPlaceholder: String
 
+    /// Controls presentation of the add-entry sheet.
     @State private var showingAdd = false
+    /// Holds the currently selected entry for edit sheet presentation.
     @State private var editingEntry: FriendEntry?
 
+    /// Bridges optional `editingEntry` state to boolean sheet presentation.
     private var editingBinding: Binding<Bool> {
         Binding(get: { editingEntry != nil }, set: { if !$0 { editingEntry = nil } })
     }
 
+    /// Entries for the active category, sorted via model helper.
     private var entries: [FriendEntry] {
         friend.entryList(for: category)
     }
@@ -52,6 +62,9 @@ struct FriendEntryListView: View {
         }
     }
 
+    /// Renders the grouped list with empty-state fallback.
+    ///
+    /// - Note: Delete actions remove persisted entries from the current model context.
     private var entryList: some View {
         List {
             if !entries.isEmpty {
@@ -79,6 +92,10 @@ struct FriendEntryListView: View {
         }
     }
 
+    /// Renders one tappable entry row.
+    ///
+    /// - Parameter entry: Entry displayed in the row.
+    /// - Returns: Row view that opens edit mode when tapped.
     private func entryRow(_ entry: FriendEntry) -> some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
@@ -103,6 +120,12 @@ struct FriendEntryListView: View {
         .onTapGesture { editingEntry = entry }
     }
 
+    /// Creates and links a new entry to the bound friend.
+    ///
+    /// - Parameters:
+    ///   - title: Raw title input from the add sheet.
+    ///   - note: Raw optional note input.
+    /// - Important: Mutates `friend.entries` and inserts into `modelContext`.
     private func addEntry(title: String, note: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -116,6 +139,3 @@ struct FriendEntryListView: View {
         friend.entries.append(entry)
     }
 }
-
-// MARK: - Add Entry Sheet
-

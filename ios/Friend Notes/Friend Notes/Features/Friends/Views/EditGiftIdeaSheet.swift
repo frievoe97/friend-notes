@@ -3,7 +3,9 @@ import SwiftData
 
 /// Sheet for editing an existing gift idea in place.
 struct EditGiftIdeaSheet: View {
+    /// Uses environment dismissal for close behavior.
     @Environment(\.dismiss) private var dismiss
+    /// Binds directly to a persisted idea so confirmed edits mutate live model data.
     @Bindable var idea: GiftIdea
 
     var body: some View {
@@ -111,6 +113,10 @@ struct EditGiftIdeaSheet: View {
         .appScreenBackground()
     }
 
+    /// Applies the shared label style used above form inputs.
+    ///
+    /// - Parameter text: Label text rendered above an input.
+    /// - Returns: Styled label view.
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.semibold))

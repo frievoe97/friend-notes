@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 }
 
 /// Main application entry point and root model container bootstrap.
+///
+/// Boots the app, wires the shared model container, and installs root UI.
 @main
 struct FriendNotesApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -72,6 +74,7 @@ struct FriendNotesApp: App {
 
 /// Root container that shows a short branded splash before entering main content.
 private struct RootSplashContainerView: View {
+    /// Local splash gate to keep launch animation state private to this container.
     @State private var showSplash = true
 
     var body: some View {

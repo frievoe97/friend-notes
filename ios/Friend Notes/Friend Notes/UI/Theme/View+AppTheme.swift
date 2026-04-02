@@ -20,6 +20,7 @@ private struct AppGlassCardModifier: ViewModifier {
     }
 }
 
+/// Convenience theming helpers applied across SwiftUI screens.
 extension View {
     /// Places the app-wide decorative gradient behind the current screen.
     ///

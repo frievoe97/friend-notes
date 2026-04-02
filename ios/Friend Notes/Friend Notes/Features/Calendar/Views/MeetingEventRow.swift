@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Row used to display a meeting or event in daily lists.
 struct MeetingEventRow: View {
+    /// Timeline entry rendered by this row.
     let meeting: Meeting
 
     var body: some View {

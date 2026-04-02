@@ -2,8 +2,11 @@ import SwiftUI
 
 /// Reusable editor card used for meeting/event notes in create and edit flows.
 struct NoteEditorCard<Editor: View>: View {
+    /// Bound note text passed through so parent controls persistence timing.
     @Binding var text: String
+    /// Minimum card height to keep visual rhythm between empty and filled states.
     let minHeight: CGFloat
+    /// Injected editor view (for example `TextEditor`) provided by parent screens.
     @ViewBuilder let editor: () -> Editor
 
     var body: some View {
@@ -19,10 +22,14 @@ struct NoteEditorCard<Editor: View>: View {
 
 /// Reusable read-only card used for meeting/event notes in view mode.
 struct NoteReadCard: View {
+    /// Raw persisted note text.
     let text: String
+    /// Placeholder text shown when the note is empty.
     let emptyText: String
+    /// Minimum card height to match editor mode layout.
     let minHeight: CGFloat
 
+    /// Whitespace-normalized note text used for empty-state checks.
     private var trimmedText: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
     }

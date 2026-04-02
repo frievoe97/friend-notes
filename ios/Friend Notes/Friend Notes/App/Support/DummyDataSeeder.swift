@@ -18,6 +18,9 @@ enum DummyDataSeeder {
             UserDefaults.standard.set(AppTagStore.encode(defaultTags), forKey: AppTagStore.key)
         }
 
+        /// Writes deterministic notification defaults so seeded environments behave consistently.
+        ///
+        /// - Note: DEBUG builds intentionally move reminder time near `now` for faster manual verification.
         // Notification defaults:
         // - 3 days birthday
         // - 1 day meeting/event
@@ -43,11 +46,29 @@ enum DummyDataSeeder {
         UserDefaults.standard.set(reminderTimeMinutes, forKey: "globalReminderTimeMinutes")
         UserDefaults.standard.set(true, forKey: "globalNotifyPostMeetingNote")
 
+        /// Builds a date relative to `now` with an explicit wall-clock time.
+        ///
+        /// - Parameters:
+        ///   - offset: Day offset relative to seed time.
+        ///   - hour: Hour component in local calendar time.
+        ///   - minute: Minute component in local calendar time.
+        /// - Returns: A best-effort composed date for timeline fixture generation.
         func day(_ offset: Int, _ hour: Int, _ minute: Int) -> Date {
             let base = calendar.date(byAdding: .day, value: offset, to: now) ?? now
             return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: base) ?? base
         }
 
+        /// Creates and inserts one seeded friend profile.
+        ///
+        /// - Parameters:
+        ///   - firstName: Seed first name.
+        ///   - lastName: Seed last name.
+        ///   - nickname: Optional nickname displayed in UI.
+        ///   - tags: Initial tag assignments.
+        ///   - birthday: Seed birthday value.
+        ///   - favorite: Initial pin/favorite state.
+        /// - Returns: Inserted friend model.
+        /// - Important: Inserts the friend into `context`.
         @discardableResult
         func makeFriend(
             firstName: String,
@@ -69,6 +90,16 @@ enum DummyDataSeeder {
             return friend
         }
 
+        /// Creates one seeded meeting fixture.
+        ///
+        /// - Parameters:
+        ///   - dayOffset: Day offset relative to seed time.
+        ///   - startHour: Local start hour.
+        ///   - startMinute: Local start minute.
+        ///   - durationMinutes: Meeting duration in minutes.
+        ///   - note: Seed note text.
+        ///   - friends: Participants linked to the meeting.
+        /// - Returns: In-memory meeting model, inserted later by caller.
         func makeMeeting(
             dayOffset: Int,
             startHour: Int,
@@ -89,6 +120,16 @@ enum DummyDataSeeder {
             )
         }
 
+        /// Creates one seeded event fixture.
+        ///
+        /// - Parameters:
+        ///   - dayOffset: Day offset relative to seed time.
+        ///   - hour: Local event hour.
+        ///   - minute: Local event minute.
+        ///   - title: Event title.
+        ///   - note: Seed note text.
+        ///   - friends: Participants linked to the event.
+        /// - Returns: In-memory event model, inserted later by caller.
         func makeEvent(
             dayOffset: Int,
             hour: Int,
@@ -108,6 +149,13 @@ enum DummyDataSeeder {
             )
         }
 
+        /// Adds rich category entries while preventing duplicate titles per category.
+        ///
+        /// - Parameters:
+        ///   - values: Seed tuples containing title and note.
+        ///   - category: Category key to append into.
+        ///   - friend: Friend that owns the created entries.
+        /// - Important: Inserts each created entry into `context` and appends to `friend.entries`.
         func addDetailedEntries(
             _ values: [(title: String, note: String)],
             category: String,
@@ -132,6 +180,15 @@ enum DummyDataSeeder {
             }
         }
 
+        /// Creates and inserts one gift idea fixture.
+        ///
+        /// - Parameters:
+        ///   - title: Gift title.
+        ///   - note: Gift note text.
+        ///   - isGifted: Initial completion state.
+        ///   - friend: Optional friend assignee.
+        /// - Returns: Inserted gift model.
+        /// - Important: Always inserts into `context`; links to `friend` when provided.
         @discardableResult
         func addGift(_ title: String, _ note: String, _ isGifted: Bool = false, to friend: Friend? = nil) -> GiftIdea {
             let idea = GiftIdea(title: title, note: note, isGifted: isGifted)

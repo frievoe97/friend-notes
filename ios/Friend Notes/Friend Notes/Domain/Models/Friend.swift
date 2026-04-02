@@ -95,12 +95,17 @@ final class Friend {
         return "\(ln) \(fn)"
     }
 
-    /// Returns entries for a given category, sorted by order then creation date.
+    /// Returns entries for one category, sorted by explicit order and stable creation tie-break.
+    ///
+    /// - Parameter category: Persisted category key to filter by.
+    /// - Returns: Entries that belong to `category`, sorted for deterministic rendering.
     func entryList(for category: String) -> [FriendEntry] {
         entries.filter { $0.category == category }.sorted { $0.order < $1.order || ($0.order == $1.order && $0.createdAt < $1.createdAt) }
     }
 
-    /// Returns the most recently added note when available.
+    /// Returns the most recently created note entry title.
+    ///
+    /// - Returns: Latest note title for quick previews, or `nil` when no notes exist.
     var latestNote: String? {
         entries.filter { $0.category == "notes" }
             .sorted { $0.createdAt > $1.createdAt }

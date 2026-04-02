@@ -3,8 +3,13 @@ import SwiftData
 
 /// Single-select sheet for assigning one friend (or no friend) to a gift.
 struct GiftAssigneePickerSheet: View {
+    /// Uses environment dismissal to close immediately after selection.
     @Environment(\.dismiss) private var dismiss
+    /// Candidate friends available for assignment.
     let allFriends: [Friend]
+    /// Binding to the selected assignee identifier in the parent form.
+    ///
+    /// - Note: `nil` represents "no person assigned".
     @Binding var selectedFriendID: PersistentIdentifier?
 
     var body: some View {

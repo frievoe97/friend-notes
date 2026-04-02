@@ -2,13 +2,27 @@ import SwiftUI
 
 /// Sheet containing a wheel date-time picker with 5-minute granularity.
 struct DateTimeWheelPickerSheet: View {
+    /// Uses environment dismissal to close after save/cancel.
     @Environment(\.dismiss) private var dismiss
+    /// Local date-time draft isolated until the user confirms save.
     @State private var selectedDate: Date
 
+    /// Navigation title shown in the sheet.
     let title: String
+    /// Optional allowed date range used by the calendar picker.
     let range: ClosedRange<Date>?
+    /// Callback invoked when the user confirms the selected date-time.
+    ///
+    /// - Important: The caller owns downstream model mutation and persistence.
     let onSave: (Date) -> Void
 
+    /// Creates a date-time picker sheet.
+    ///
+    /// - Parameters:
+    ///   - title: Navigation title shown in the sheet.
+    ///   - initialDate: Initial date-time value shown to the user.
+    ///   - range: Optional selectable date bounds.
+    ///   - onSave: Callback triggered on save.
     init(
         title: String,
         initialDate: Date,
@@ -83,6 +97,7 @@ struct DateTimeWheelPickerSheet: View {
         }
     }
 
+    /// Date bounds used by the calendar picker, defaulting to an unrestricted range.
     private var dateRange: ClosedRange<Date> {
         range ?? (Date.distantPast...Date.distantFuture)
     }

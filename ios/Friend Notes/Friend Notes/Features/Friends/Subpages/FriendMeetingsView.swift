@@ -1,31 +1,44 @@
 import SwiftUI
 import SwiftData
 
+/// Lists upcoming and past meetings/events for a single friend.
+///
+/// - Note: This screen derives sections from the bound model and opens create flows with friend preselection.
 struct FriendMeetingsView: View {
+    /// Bound friend model that provides meeting/event relationships.
     @Bindable var friend: Friend
+    /// Controls expansion of the past section.
     @State private var isPastExpanded = false
+    /// Controls truncation for large upcoming lists.
     @State private var showAllUpcoming = false
+    /// Presents the add-meeting sheet.
     @State private var showingAddMeeting = false
+    /// Presents the add-event sheet.
     @State private var showingAddEvent = false
 
+    /// Default number of upcoming items shown before expanding.
     private let upcomingLimit = 5
 
+    /// Start-of-day anchor used to split upcoming and past entries consistently.
     private var startOfToday: Date {
         Calendar.current.startOfDay(for: Date())
     }
 
+    /// Future or same-day entries sorted ascending by start date.
     private var upcoming: [Meeting] {
         friend.meetings
             .filter { $0.startDate >= startOfToday }
             .sorted { $0.startDate < $1.startDate }
     }
 
+    /// Historical entries sorted descending by start date.
     private var past: [Meeting] {
         friend.meetings
             .filter { $0.startDate < startOfToday }
             .sorted { $0.startDate > $1.startDate }
     }
 
+    /// Upcoming entries shown after applying collapse/expand behavior.
     private var visibleUpcoming: [Meeting] {
         showAllUpcoming ? upcoming : Array(upcoming.prefix(upcomingLimit))
     }
@@ -143,6 +156,10 @@ struct FriendMeetingsView: View {
         .appScreenBackground()
     }
 
+    /// Renders one timeline row for a meeting or event entry.
+    ///
+    /// - Parameter meeting: Timeline entry displayed in the row.
+    /// - Returns: Styled row with title, schedule, and optional note preview.
     private func meetingRow(_ meeting: Meeting) -> some View {
         HStack(spacing: 12) {
             Image(systemName: meeting.kind == .meeting ? "person.2.fill" : "flag.fill")
@@ -171,7 +188,3 @@ struct FriendMeetingsView: View {
         .padding(.vertical, 2)
     }
 }
-
-// MARK: - Gift Ideas Sub-Page
-
-/// Sub-page for managing gift ideas associated with a friend.

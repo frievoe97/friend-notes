@@ -1,18 +1,31 @@
 import SwiftUI
 import SwiftData
 
+/// Edits an existing friend entry using local draft state before commit.
+///
+/// - Note: The view writes back to the bound `FriendEntry` only when the user confirms save.
 struct EditFriendEntrySheet: View {
+    /// Uses environment dismissal so the caller remains the source of presentation state.
     @Environment(\.dismiss) private var dismiss
+    /// Binds directly to the persisted entry model to apply confirmed mutations.
     @Bindable var entry: FriendEntry
+    /// Title draft that isolates intermediate changes from persistence until save.
     @State private var draftTitle: String
+    /// Optional note draft that isolates intermediate changes from persistence until save.
     @State private var draftNote: String
+    /// Tracks active input focus to support keyboard navigation and dismissal.
     @FocusState private var focusedField: Field?
 
+    /// Focus targets used by the edit form.
     private enum Field {
         case title
         case note
     }
 
+    /// Creates an editor initialized from the current model values.
+    ///
+    /// - Parameter entry: Persisted entry being edited.
+    /// - Note: Draft state is seeded once so cancel can restore original persisted values.
     init(entry: FriendEntry) {
         self.entry = entry
         _draftTitle = State(initialValue: entry.title)
@@ -111,13 +124,13 @@ struct EditFriendEntrySheet: View {
         .appScreenBackground()
     }
 
+    /// Applies a shared label style for entry edit fields.
+    ///
+    /// - Parameter text: Field title rendered above an input.
+    /// - Returns: Styled field label view.
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
     }
 }
-
-// MARK: - Meetings Sub-Page
-
-/// Sub-page listing all meetings and events linked to a friend.

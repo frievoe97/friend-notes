@@ -2,13 +2,26 @@ import SwiftUI
 
 /// Sheet containing a wheel-style birthday picker with cancel/save actions.
 struct BirthdayPickerSheet: View {
+    /// Uses environment dismissal to close after save/cancel.
     @Environment(\.dismiss) private var dismiss
+    /// Local picker value so users can cancel without mutating parent state.
     @State private var selectedDate: Date
 
+    /// Navigation title shown in the sheet header.
     let title: String
+    /// Source birthday date used to initialize local selection.
     let initialDate: Date
+    /// Callback invoked when the user confirms the selected date.
+    ///
+    /// - Important: The caller owns persistence of the selected value.
     let onSave: (Date) -> Void
 
+    /// Creates a birthday picker sheet with an initial date and save callback.
+    ///
+    /// - Parameters:
+    ///   - title: Navigation title shown in the sheet.
+    ///   - initialDate: Date preselected when the sheet opens.
+    ///   - onSave: Callback triggered when the user confirms.
     init(
         title: String,
         initialDate: Date,
