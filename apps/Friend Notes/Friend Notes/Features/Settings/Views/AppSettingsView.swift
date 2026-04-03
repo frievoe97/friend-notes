@@ -3,36 +3,74 @@ import SwiftData
 
 // MARK: - App Settings
 
-/// Hosts global app preferences such as notifications, calendar options, and shared tags.
+/// Hosts all global app preferences shared across features.
+///
+/// This screen edits persisted settings (`@AppStorage`) and triggers side effects where needed,
+/// for example requesting notification authorization and removing deleted tags from all friends.
 struct AppSettingsView: View {
+    // MARK: - Persisted Data Sources
+
+    /// All friends in storage, used to cascade tag removals to every profile.
     @Query private var allFriends: [Friend]
+
+    /// Master switch for app-managed local notifications.
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
+    /// Controls whether birthdays are rendered in the calendar feature.
     @AppStorage("showBirthdaysOnCalendar") private var showBirthdaysOnCalendar = true
+    /// JSON-encoded global tag registry managed by ``AppTagStore``.
     @AppStorage(AppTagStore.key) private var definedTagsRaw = "[]"
 
+    /// Enables birthday reminders.
     @AppStorage("globalNotifyBirthday") private var globalNotifyBirthday = true
+    /// Days in advance for birthday reminders.
     @AppStorage("globalBirthdayReminderDays") private var globalBirthdayReminderDays = 3
+    /// Enables meeting reminders.
     @AppStorage("globalNotifyMeetings") private var globalNotifyMeetings = true
+    /// Days in advance for meeting reminders.
     @AppStorage("globalMeetingReminderDays") private var globalMeetingReminderDays = 1
+    /// Enables event reminders.
     @AppStorage("globalNotifyEvents") private var globalNotifyEvents = true
+    /// Days in advance for event reminders.
     @AppStorage("globalEventReminderDays") private var globalEventReminderDays = 1
+    /// Enables inactivity reminders when no meetings happened recently.
     @AppStorage("globalNotifyLongNoMeeting") private var globalNotifyLongNoMeeting = true
+    /// Number of inactivity weeks before scheduling a reminder.
     @AppStorage("globalLongNoMeetingWeeks") private var globalLongNoMeetingWeeks = 4
+    /// Preferred daily reminder time in minutes since midnight.
     @AppStorage("globalReminderTimeMinutes") private var globalReminderTimeMinutes = 9 * 60
+    /// Enables a reminder after meetings to add notes.
     @AppStorage("globalNotifyPostMeetingNote") private var globalNotifyPostMeetingNote = true
+    /// Enables reminders for due follow-up tasks.
     @AppStorage("globalNotifyFollowUps") private var globalNotifyFollowUps = true
 
+    // MARK: - View State
+
+    /// Draft value for a new reusable tag.
     @State private var newTag = ""
+    /// Expands/collapses the full tag list.
     @State private var showAllTags = false
+    /// Inline status shown when notification permission is unavailable.
     @State private var notificationStatusMessage = ""
+    /// Tracks which text input should currently be focused.
     @FocusState private var focusedField: FocusField?
+
+    // MARK: - Layout Constants
+
+    /// Maximum number of tags shown before collapsing behind a "show all" action.
     private let tagPreviewLimit = 14
+    /// Scroll target used to keep the add-tag row visible when keyboard appears.
     private let addTagInputScrollID = "settings-add-tag-input"
+    /// Vertical spacing between controls within a section.
     private let settingsControlSpacing: CGFloat = 20
+    /// List row insets used for settings cards.
     private let settingsSectionInset: CGFloat = 12
+    /// Internal vertical padding for settings card content.
     private let settingsSectionPadding: CGFloat = 12
+    /// Vertical padding for each notification row.
     private let notificationRowPadding: CGFloat = 12
+    /// Top spacing before nested notification sub-controls.
     private let notificationSubrowTopSpacing: CGFloat = 10
+    /// Leading offset used for nested notification sub-controls.
     private let notificationSubrowLeadingInset: CGFloat = 2
 
     /// Focus targets in the settings form.
@@ -55,7 +93,9 @@ struct AppSettingsView: View {
         showAllTags ? sortedTags : Array(sortedTags.prefix(tagPreviewLimit))
     }
 
-    /// Binding that maps persisted reminder minutes to a `Date` used by time pickers.
+    /// Two-way mapping between persisted minutes and the time picker `Date`.
+    ///
+    /// - Note: Values are clamped to `00:00...23:59` to keep storage resilient against stale or invalid data.
     private var reminderTimeBinding: Binding<Date> {
         Binding(
             get: {
@@ -74,6 +114,7 @@ struct AppSettingsView: View {
         )
     }
 
+    /// Root settings screen composed of notifications, calendar, and tag management sections.
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -99,6 +140,7 @@ struct AppSettingsView: View {
                 }
                 .onChange(of: focusedField) { _, newValue in
                     guard newValue == .newTag else { return }
+                    // Wait one run-loop tick so keyboard/layout updates settle before scrolling.
                     DispatchQueue.main.async {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             proxy.scrollTo(addTagInputScrollID, anchor: .bottom)
@@ -122,6 +164,8 @@ struct AppSettingsView: View {
                     notificationStatusMessage = ""
                     return
                 }
+
+                // Keep persisted state aligned with system permission state.
                 Task {
                     let granted = await NotificationService.shared.requestAuthorizationIfNeeded()
                     await MainActor.run {
@@ -318,6 +362,8 @@ struct AppSettingsView: View {
     }
 
     /// Input row for adding new globally reusable tags.
+    ///
+    /// - Note: The entire card is tappable to make focusing easy on smaller devices.
     private var addTagInput: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
@@ -348,9 +394,9 @@ struct AppSettingsView: View {
         }
     }
 
-    /// Adds a tag to the global registry if it is non-empty and unique.
+    /// Adds the current draft tag to the global registry when valid.
     ///
-    /// - Note: Duplicate checks are case-insensitive.
+    /// - Note: Duplicate checks are case-insensitive and preserve existing tag casing.
     private func addTag() {
         let trimmed = newTag.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -365,9 +411,10 @@ struct AppSettingsView: View {
         newTag = ""
     }
 
-    /// Removes a tag globally and from all friend profiles.
+    /// Removes a tag globally and cascades the removal to all friend profiles.
     ///
     /// - Parameter tag: Tag value to remove.
+    /// - Important: This mutates persisted friend models currently loaded in `allFriends`.
     private func removeTag(_ tag: String) {
         var tags = definedTags
         tags.removeAll { $0.caseInsensitiveCompare(tag) == .orderedSame }
@@ -377,7 +424,7 @@ struct AppSettingsView: View {
         }
     }
 
-    /// Builds one reminder row with enable toggle and optional lead-time picker.
+    /// Builds one reminder row with an enable toggle and optional lead-time picker.
     ///
     /// - Parameters:
     ///   - title: Reminder category title.
@@ -410,7 +457,7 @@ struct AppSettingsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }   
+    }
 
     /// Produces a localized label for day-offset picker values.
     ///
@@ -432,7 +479,9 @@ struct AppSettingsView: View {
             : L10n.text("settings.weeks.value.other", "%d weeks", value)
     }
 
-    /// Clamps persisted reminder values into supported picker ranges.
+    /// Normalizes persisted reminder values to supported UI ranges.
+    ///
+    /// - Important: Call this before rendering controls that depend on closed ranges (`1...7` days).
     private func normalizeReminderRanges() {
         globalBirthdayReminderDays = min(max(globalBirthdayReminderDays, 1), 7)
         globalMeetingReminderDays = min(max(globalMeetingReminderDays, 1), 7)

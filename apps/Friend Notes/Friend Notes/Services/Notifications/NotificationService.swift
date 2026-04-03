@@ -4,14 +4,20 @@ import SwiftData
 
 /// Schedules and manages all app-owned local notifications.
 ///
-/// - Important: This service only touches requests whose identifiers start with the internal prefix.
+/// `NotificationService` is the single authority for creating, replacing, and clearing local
+/// reminders derived from app data (`Friend`, `Meeting`, `FollowUpTask`) and global settings.
+///
+/// - Important: The service only touches requests whose identifiers start with `friendsapp.`.
+/// - Important: Notification IDs include stable model identifiers so rescheduling stays idempotent.
 final class NotificationService {
     /// Shared singleton instance used across the app lifecycle.
     static let shared = NotificationService()
 
+    // MARK: - Dependencies and Constants
+
     /// System notification center used for authorization, scheduling, and cleanup.
     private let center = UNUserNotificationCenter.current()
-    /// Identifier prefix used to scope this service's notification ownership.
+    /// Identifier namespace used to scope this service's notification ownership.
     private let prefix = "friendsapp."
     /// Maximum lag (seconds) tolerated for same-minute catch-up scheduling.
     private let reminderCatchUpGraceSeconds: TimeInterval = 120
@@ -21,11 +27,13 @@ final class NotificationService {
     /// Enforces singleton usage.
     private init() {}
 
+    // MARK: - Public API
+
     /// Requests notification authorization if needed.
     ///
     /// - Returns: `true` when authorization is granted, otherwise `false`.
     ///
-    /// - Note: Errors are handled internally and mapped to `false`.
+    /// - Note: Errors are intentionally swallowed and mapped to `false` to keep scheduling call sites simple.
     func requestAuthorizationIfNeeded() async -> Bool {
         do {
             return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
@@ -42,9 +50,9 @@ final class NotificationService {
         }
     }
 
-    /// Removes all pending and delivered notifications created by this app module.
+    /// Removes all pending and delivered notifications owned by this app.
     ///
-    /// - Important: Only notifications with the internal `friendsapp.` identifier prefix are removed.
+    /// - Important: Only notifications with the internal `friendsapp.` prefix are removed.
     func clearManagedNotifications() async {
         let ids = await managedNotificationIDs()
         guard !ids.isEmpty else { return }
@@ -52,7 +60,7 @@ final class NotificationService {
         center.removeDeliveredNotifications(withIdentifiers: ids)
     }
 
-    /// Clears and reschedules all app-managed notifications from current models and settings.
+    /// Rebuilds the entire reminder set from current models and global settings.
     ///
     /// - Parameters:
     ///   - friends: Current friend records used for birthday and "long time no meeting" reminders.
@@ -60,7 +68,8 @@ final class NotificationService {
     ///   - followUpTasks: Current follow-up tasks used for due-date reminders.
     ///   - settings: Global notification preferences.
     ///
-    /// - Note: When permissions are missing or disabled in settings, scheduling exits safely without throwing.
+    /// - Important: Existing managed notifications are always cleared first to avoid duplicate schedules.
+    /// - Note: When notifications are disabled or system permission is missing, scheduling exits safely.
     func rescheduleAll(
         friends: [Friend],
         meetings: [Meeting],
@@ -289,15 +298,18 @@ final class NotificationService {
         }
     }
 
+    // MARK: - Date Resolution
+
     /// Calculates the next birthday reminder date.
     ///
     /// - Parameters:
     ///   - birthday: The stored birthday date.
     ///   - reminderDays: Days before birthday when reminder should fire.
+    ///   - reminderTimeMinutes: Preferred daily reminder time in minutes since midnight.
     ///   - referenceDate: Baseline timestamp used to pick the next valid occurrence.
     /// - Returns: A future reminder date in local time, or `nil` when no valid date can be derived.
     ///
-    /// - Note: The time component is normalized to the configured daily reminder time.
+    /// - Note: `reminderDays` is clamped to `1...7`.
     private func nextBirthdayReminderDate(
         birthday: Date,
         reminderDays: Int,
@@ -347,7 +359,15 @@ final class NotificationService {
 
     /// Resolves the next reminder date for "long time no meeting".
     ///
-    /// - Note: If no meeting happened in the last `reminderWeeks`, a reminder is scheduled for today (or tomorrow if today's reminder time already passed).
+    /// - Parameters:
+    ///   - lastMeetingEnd: Most recent known meeting end for the friend.
+    ///   - reminderWeeks: Number of inactive weeks before reminding.
+    ///   - reminderTimeMinutes: Preferred daily reminder time in minutes since midnight.
+    ///   - referenceDate: Baseline timestamp used to derive "overdue" state.
+    ///   - calendar: Calendar used for date arithmetic and day-boundary checks.
+    /// - Returns: The next valid fire date, or `nil` when date construction fails.
+    ///
+    /// - Note: Overdue reminders are scheduled today, with a short same-minute catch-up fallback.
     private func longNoMeetingReminderDate(
         lastMeetingEnd: Date,
         reminderWeeks: Int,
@@ -411,6 +431,7 @@ final class NotificationService {
     ///
     /// - Parameters:
     ///   - date: Source date.
+    ///   - reminderTimeMinutes: Preferred daily reminder time in minutes since midnight.
     ///   - calendar: Calendar used for date component extraction.
     /// - Returns: A date on the same day at the configured reminder time, or `nil` if date composition fails.
     private func reminderDate(on date: Date, reminderTimeMinutes: Int, calendar: Calendar) -> Date? {
@@ -429,7 +450,14 @@ final class NotificationService {
 
     /// Resolves a final fire date, allowing a short same-day catch-up window.
     ///
-    /// - Note: This avoids dropping reminders when rescheduling happens a few seconds after the selected minute.
+    /// - Parameters:
+    ///   - preferredDate: Ideal fire date computed from reminder settings.
+    ///   - anchorDate: Business date that the reminder belongs to (for same-day validation).
+    ///   - referenceDate: Current timestamp used to decide whether catch-up is still valid.
+    ///   - calendar: Calendar used for day-boundary checks.
+    /// - Returns: A future fire date, or `nil` when the reminder should be skipped.
+    ///
+    /// - Note: This avoids dropping reminders when rescheduling happens moments after the target minute.
     private func resolvedFireDate(
         preferredDate: Date,
         anchorDate: Date,
@@ -448,6 +476,8 @@ final class NotificationService {
         }
         return referenceDate.addingTimeInterval(immediateCatchUpDelaySeconds)
     }
+
+    // MARK: - Route Payload Metadata
 
     /// Creates notification route metadata for friend-targeted notifications.
     private func friendRouteUserInfo(_ friend: Friend) -> [AnyHashable: Any] {
@@ -483,6 +513,8 @@ final class NotificationService {
             .filter { !$0.isEmpty }
         return ListFormatter.localizedString(byJoining: cleanedNames)
     }
+
+    // MARK: - UNUserNotificationCenter Bridges
 
     /// Adds a local notification request to `UNUserNotificationCenter`.
     ///

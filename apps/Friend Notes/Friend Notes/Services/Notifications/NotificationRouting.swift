@@ -3,6 +3,8 @@ import UserNotifications
 import Combine
 
 /// Supported navigation targets that can be opened from a tapped notification.
+///
+/// Associated values contain stringified persistent model identifiers.
 enum AppNotificationRoute: Equatable {
     case friend(id: String)
     case meeting(id: String)
@@ -39,6 +41,7 @@ final class NotificationRouteStore: ObservableObject {
     /// Parses route metadata from notification payload user info.
     ///
     /// - Parameter userInfo: Raw notification metadata dictionary.
+    /// - Important: Expected keys are `route_type` and `route_id` as provided by `NotificationService`.
     /// - Note: Invalid or incomplete payloads are ignored intentionally.
     func handle(userInfo: [AnyHashable: Any]) {
         guard

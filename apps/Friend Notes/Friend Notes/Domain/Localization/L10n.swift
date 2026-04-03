@@ -2,7 +2,9 @@ import Foundation
 
 /// Lightweight localization helper for resolved strings and formatted variants.
 enum L10n {
+    /// Name of the strings table used across the app.
     private static let tableName = "Localizable"
+    /// Cached English bundle used as a stable fallback when the active locale is incomplete.
     private static let englishBundle: Bundle? = {
         guard
             let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
@@ -12,6 +14,8 @@ enum L10n {
         }
         return bundle
     }()
+
+    // MARK: - Lookup
 
     /// Resolves a localized value for `key` from the given bundle.
     ///
@@ -24,12 +28,16 @@ enum L10n {
         return value == key ? nil : value
     }
 
+    // MARK: - Public API
+
     /// Resolves a localized string for the given key with an English-first fallback chain.
     ///
     /// - Parameters:
     ///   - key: The localization key in `Localizable.strings`.
     ///   - fallback: Last-resort default used when key is unavailable in current and English localizations.
     /// - Returns: Current locale string, otherwise English string, otherwise `fallback`.
+    ///
+    /// - Note: Missing keys are intentionally non-fatal to keep UI rendering resilient.
     static func text(_ key: String, _ fallback: String) -> String {
         if let value = localizedValue(for: key, in: .main) {
             return value

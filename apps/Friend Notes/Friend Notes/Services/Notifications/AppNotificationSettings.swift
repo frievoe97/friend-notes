@@ -1,6 +1,10 @@
 import Foundation
 
 /// Global notification preferences used when scheduling local reminders.
+///
+/// This value object mirrors persisted settings and is passed into
+/// ``NotificationService/rescheduleAll(friends:meetings:followUpTasks:settings:)``
+/// so scheduling logic stays pure and testable.
 struct AppNotificationSettings {
     /// Master switch for all app-managed notifications.
     var notificationsEnabled: Bool

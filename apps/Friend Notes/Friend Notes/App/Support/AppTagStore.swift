@@ -1,6 +1,9 @@
 import Foundation
 
 /// Encodes and decodes the globally defined friend tags stored in app preferences.
+///
+/// This helper centralizes serialization so every feature reads and writes the same
+/// on-disk format (`[String]` encoded as UTF-8 JSON).
 enum AppTagStore {
     /// The `UserDefaults` key used to persist the encoded tags array.
     static let key = "definedFriendTags"
@@ -9,6 +12,8 @@ enum AppTagStore {
     ///
     /// - Parameter rawValue: The raw JSON string persisted in app storage.
     /// - Returns: A decoded tag list, or an empty array when the input is invalid JSON or not UTF-8.
+    ///
+    /// - Note: Decoding does not trim or deduplicate values; call sites apply their own validation rules.
     static func decode(_ rawValue: String) -> [String] {
         guard let data = rawValue.data(using: .utf8),
               let tags = try? JSONDecoder().decode([String].self, from: data) else {
@@ -21,6 +26,8 @@ enum AppTagStore {
     ///
     /// - Parameter tags: The list of tags to encode.
     /// - Returns: A JSON string representation, or `"[]"` if encoding fails.
+    ///
+    /// - Note: Encoding preserves ordering and exact string casing.
     static func encode(_ tags: [String]) -> String {
         guard let data = try? JSONEncoder().encode(tags),
               let encoded = String(data: data, encoding: .utf8) else {
