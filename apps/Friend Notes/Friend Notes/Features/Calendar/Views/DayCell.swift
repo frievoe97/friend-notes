@@ -16,6 +16,8 @@ struct DayCell: View {
     let hasEvent: Bool
     /// Indicates whether at least one birthday exists on this day.
     let hasBirthday: Bool
+    /// Indicates whether at least one follow-up task exists on this day.
+    let hasFollowUp: Bool
 
     var body: some View {
         VStack(spacing: 3) {
@@ -34,6 +36,7 @@ struct DayCell: View {
                 if hasBirthday { Circle().fill(AppTheme.birthday).frame(width: 4, height: 4) }
                 if hasMeeting  { Circle().fill(AppTheme.accent).frame(width: 4, height: 4) }
                 if hasEvent  { Circle().fill(AppTheme.event).frame(width: 4, height: 4) }
+                if hasFollowUp { Circle().fill(AppTheme.followUp).frame(width: 4, height: 4) }
             }
             .frame(height: 6)
         }

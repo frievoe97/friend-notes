@@ -45,6 +45,7 @@ enum DummyDataSeeder {
         UserDefaults.standard.set(4, forKey: "globalLongNoMeetingWeeks")
         UserDefaults.standard.set(reminderTimeMinutes, forKey: "globalReminderTimeMinutes")
         UserDefaults.standard.set(true, forKey: "globalNotifyPostMeetingNote")
+        UserDefaults.standard.set(true, forKey: "globalNotifyFollowUps")
 
         /// Builds a date relative to `now` with an explicit wall-clock time.
         ///
@@ -198,6 +199,43 @@ enum DummyDataSeeder {
             }
             context.insert(idea)
             return idea
+        }
+
+        /// Creates and inserts one follow-up task fixture.
+        ///
+        /// - Parameters:
+        ///   - title: Follow-up title.
+        ///   - note: Follow-up note text.
+        ///   - dayOffset: Day offset relative to seed time.
+        ///   - hour: Local due hour.
+        ///   - minute: Local due minute.
+        ///   - isCompleted: Initial completion state.
+        ///   - friend: Owning friend for this task.
+        /// - Returns: Inserted follow-up model.
+        @discardableResult
+        func addFollowUp(
+            _ title: String,
+            _ note: String,
+            dayOffset: Int,
+            hour: Int,
+            minute: Int,
+            isCompleted: Bool = false,
+            to friend: Friend
+        ) -> FollowUpTask {
+            let dueDate = day(dayOffset, hour, minute)
+            let task = FollowUpTask(
+                title: title,
+                note: note,
+                dueDate: dueDate,
+                isCompleted: isCompleted
+            )
+            task.friend = friend
+            if isCompleted {
+                task.completedAt = calendar.date(byAdding: .minute, value: 25, to: dueDate) ?? dueDate
+            }
+            context.insert(task)
+            friend.followUpTasks.append(task)
+            return task
         }
 
         // Exactly 7 friends with rich profile data.
@@ -359,6 +397,52 @@ enum DummyDataSeeder {
         for (friend, gifts) in extraGiftsByFriend {
             for gift in gifts {
                 addGift(gift.0, gift.1, gift.2, to: friend)
+            }
+        }
+
+        let followUpsByFriend: [(Friend, [(String, String, Int, Int, Int, Bool)])] = [
+            (mia, [
+                ("Foto-Route für Sonntag finalisieren", "3 Stopps auswählen und Startzeit bestätigen.", 2, 19, 15, false),
+                ("Porto-Hotel-Liste prüfen", "Top 3 Optionen zusammenfassen.", 5, 12, 0, false),
+                ("Objektiv-Vergleich nachfassen", "23mm vs 35mm Entscheidung notieren.", -1, 17, 30, true),
+            ]),
+            (leon, [
+                ("Neue Laufschuhe empfehlen", "2 Modelle mit Stabilitätsfokus schicken.", 1, 18, 10, false),
+                ("Halbmarathon-Renntag abstimmen", "Treffpunkt für Support klären.", 11, 9, 45, false),
+            ]),
+            (emma, [
+                ("Präsentation proben", "10 Minuten Trockenlauf mit Zeitmessung.", 3, 20, 0, false),
+                ("Prüfungsergebnis erfragen", "Kurze Nachricht am Abend senden.", -2, 18, 20, true),
+            ]),
+            (noah, [
+                ("Cloud-Migrations-Update einholen", "Nach Risiken und Entscheidung fragen.", 4, 10, 0, false),
+                ("Monitor-Stand-Vorschläge senden", "Zwei ergonomische Optionen verlinken.", 7, 14, 15, false),
+            ]),
+            (sofia, [
+                ("Lissabon-Café-Liste teilen", "3 Spots mit Öffnungszeiten schicken.", 6, 16, 40, false),
+                ("Handmade-Geschenkidee finalisieren", "Materialien und Budget festlegen.", 9, 11, 25, false),
+            ]),
+            (paul, [
+                ("Lampen-Installation terminieren", "30-Minuten-Slot für Hilfe finden.", 2, 17, 50, false),
+                ("Grill-Restaurant für Geburtstag reservieren", "2 Optionen anrufen.", -3, 12, 30, true),
+            ]),
+            (lina, [
+                ("Thesis-Check-in", "Fragen sammeln und kurze Fokus-Session planen.", 1, 13, 0, false),
+                ("Stationery-Geschenk bestellen", "Lieferzeit prüfen und heute bestellen.", 8, 9, 20, false),
+            ]),
+        ]
+
+        for (friend, followUps) in followUpsByFriend {
+            for followUp in followUps {
+                addFollowUp(
+                    followUp.0,
+                    followUp.1,
+                    dayOffset: followUp.2,
+                    hour: followUp.3,
+                    minute: followUp.4,
+                    isCompleted: followUp.5,
+                    to: friend
+                )
             }
         }
 

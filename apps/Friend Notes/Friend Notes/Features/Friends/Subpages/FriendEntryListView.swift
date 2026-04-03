@@ -44,7 +44,6 @@ struct FriendEntryListView: View {
                     showingAdd = true
                 } label: {
                     Image(systemName: "plus")
-                        .font(.body.weight(.semibold))
                 }
                 .accessibilityLabel(L10n.text("common.add", "Add"))
             }
@@ -111,7 +110,6 @@ struct FriendEntryListView: View {
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

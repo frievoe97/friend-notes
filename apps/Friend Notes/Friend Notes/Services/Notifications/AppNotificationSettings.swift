@@ -24,5 +24,6 @@ struct AppNotificationSettings {
     var globalReminderTimeMinutes: Int
     /// Enables reminder to add a note after a meeting ends.
     var globalNotifyPostMeetingNote: Bool
+    /// Enables reminders for pending follow-up tasks at their due date and time.
+    var globalNotifyFollowUps: Bool
 }
-

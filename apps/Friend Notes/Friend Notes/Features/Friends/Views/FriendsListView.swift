@@ -133,11 +133,11 @@ struct FriendsListView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button { showingAddFriend = true } label: {
-                        Image(systemName: "plus").fontWeight(.semibold)
+                        Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $showingAddFriend) {
+            .navigationDestination(isPresented: $showingAddFriend) {
                 AddFriendView()
             }
         }

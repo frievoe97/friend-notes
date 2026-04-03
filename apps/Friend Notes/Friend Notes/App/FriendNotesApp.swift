@@ -53,7 +53,7 @@ struct FriendNotesApp: App {
 
     /// Shared persistent SwiftData container for app models.
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([Friend.self, Meeting.self, GiftIdea.self, FriendEntry.self])
+        let schema = Schema([Friend.self, Meeting.self, GiftIdea.self, FollowUpTask.self, FriendEntry.self])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])

@@ -16,6 +16,7 @@ enum InMemoryModelContainer {
             Friend.self,
             Meeting.self,
             GiftIdea.self,
+            FollowUpTask.self,
             FriendEntry.self,
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)

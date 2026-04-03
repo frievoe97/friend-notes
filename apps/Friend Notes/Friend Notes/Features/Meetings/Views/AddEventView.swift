@@ -62,12 +62,21 @@ struct AddEventView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                        .accessibilityLabel(L10n.text("common.cancel", "Cancel"))
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(L10n.text("common.save", "Save")) { save() }
-                            .fontWeight(.semibold)
-                            .disabled(eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedFriends.isEmpty)
+                        Button {
+                            save()
+                        } label: {
+                            Image(systemName: "checkmark")
+                        }
+                        .disabled(eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedFriends.isEmpty)
+                        .accessibilityLabel(L10n.text("common.save", "Save"))
                     }
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
@@ -148,7 +157,7 @@ struct AddEventView: View {
                     HStack(spacing: 14) {
                         ForEach(selectedFriendsSorted) { friend in
                             VStack(spacing: 6) {
-                                AvatarView(name: friend.displayName, size: 48)
+                                AvatarView(friend: friend, size: 48)
                                 Text(friend.displayName)
                                     .font(.caption2)
                                     .lineLimit(1)
@@ -253,10 +262,12 @@ struct AddEventView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.done", "Done")) {
+                    Button {
                         showingFriendsPicker = false
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .fontWeight(.semibold)
+                    .accessibilityLabel(L10n.text("common.done", "Done"))
                 }
             }
         }
@@ -285,10 +296,8 @@ struct AddEventView: View {
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
-                Image(systemName: "plus")
-                    .font(.caption.weight(.semibold))
-                    .frame(width: 64)
-                    .foregroundStyle(.secondary)
+                Color.clear
+                    .frame(width: 64, height: 12)
             }
             .padding(.top, 6)
             .contentShape(Rectangle())

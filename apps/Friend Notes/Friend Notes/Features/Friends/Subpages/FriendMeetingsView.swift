@@ -58,7 +58,7 @@ struct FriendMeetingsView: View {
                             Button {
                                 withAnimation { showAllUpcoming = true }
                             } label: {
-                                Text(L10n.text("friend.history.upcoming.show_all", "Show all upcoming (%d)", upcoming.count))
+                                Text(L10n.text("friend.history.upcoming.show_all", "Show more (%d)", upcoming.count))
                                     .font(.subheadline)
                                     .foregroundStyle(AppTheme.accent)
                                     .frame(maxWidth: .infinity, alignment: .center)
@@ -127,7 +127,6 @@ struct FriendMeetingsView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
-                        .font(.body.weight(.semibold))
                 }
                 .accessibilityLabel(L10n.text("common.add", "Add"))
             }
@@ -140,10 +139,7 @@ struct FriendMeetingsView: View {
                         systemImage: "clock.arrow.circlepath"
                     )
                 } description: {
-                    Text(L10n.text(
-                        "friend.history.empty",
-                        "No meetings or events yet. Add one in the Calendar tab."
-                    ))
+                    Text(L10n.text("list.detail.empty", "Tap + to add an entry."))
                 }
             }
         }

@@ -20,6 +20,7 @@ struct AppSettingsView: View {
     @AppStorage("globalLongNoMeetingWeeks") private var globalLongNoMeetingWeeks = 4
     @AppStorage("globalReminderTimeMinutes") private var globalReminderTimeMinutes = 9 * 60
     @AppStorage("globalNotifyPostMeetingNote") private var globalNotifyPostMeetingNote = true
+    @AppStorage("globalNotifyFollowUps") private var globalNotifyFollowUps = true
 
     @State private var newTag = ""
     @State private var showAllTags = false
@@ -27,6 +28,12 @@ struct AppSettingsView: View {
     @FocusState private var focusedField: FocusField?
     private let tagPreviewLimit = 14
     private let addTagInputScrollID = "settings-add-tag-input"
+    private let settingsControlSpacing: CGFloat = 20
+    private let settingsSectionInset: CGFloat = 12
+    private let settingsSectionPadding: CGFloat = 12
+    private let notificationRowPadding: CGFloat = 12
+    private let notificationSubrowTopSpacing: CGFloat = 10
+    private let notificationSubrowLeadingInset: CGFloat = 2
 
     /// Focus targets in the settings form.
     private enum FocusField {
@@ -73,13 +80,13 @@ struct AppSettingsView: View {
                 List {
                     globalNotificationsSection
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowInsets(EdgeInsets(top: settingsSectionInset, leading: 18, bottom: settingsSectionInset, trailing: 18))
                     calendarSection
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowInsets(EdgeInsets(top: settingsSectionInset, leading: 18, bottom: settingsSectionInset, trailing: 18))
                     tagsSection
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowInsets(EdgeInsets(top: settingsSectionInset, leading: 18, bottom: settingsSectionInset, trailing: 18))
                         .listRowSeparator(.hidden, edges: .bottom)
                 }
                 .listStyle(.plain)
@@ -133,73 +140,129 @@ struct AppSettingsView: View {
     /// Section for global reminder categories and lead-time configuration.
     private var globalNotificationsSection: some View {
         Section {
-            Toggle(L10n.text("settings.notifications.enable", "Enable Notifications"), isOn: $notificationsEnabled)
-            if notificationsEnabled {
-                HStack {
-                    Text(L10n.text("settings.reminder.time", "Reminder time"))
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    DatePicker(
-                        L10n.text("settings.reminder.time", "Reminder time"),
-                        selection: reminderTimeBinding,
-                        displayedComponents: .hourAndMinute
-                    )
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                }
+            VStack(alignment: .leading, spacing: 0) {
+                Toggle(L10n.text("settings.notifications.enable", "Enable Notifications"), isOn: $notificationsEnabled)
+                    .padding(.vertical, notificationRowPadding + 2)
+                if notificationsEnabled {
+                    Divider()
 
-                reminderRow(
-                    title: L10n.text("settings.reminder.birthdays", "Birthdays"),
-                    isOn: $globalNotifyBirthday,
-                    days: $globalBirthdayReminderDays
-                )
+                    HStack(alignment: .center) {
+                        Text(L10n.text("settings.reminder.time", "Reminder time"))
+                            .font(.body)
+                            .foregroundStyle(.primary)
 
-                reminderRow(
-                    title: L10n.text("settings.reminder.meetings", "Meetings"),
-                    isOn: $globalNotifyMeetings,
-                    days: $globalMeetingReminderDays
-                )
+                        Spacer(minLength: 16)
 
-                reminderRow(
-                    title: L10n.text("settings.reminder.events", "Events"),
-                    isOn: $globalNotifyEvents,
-                    days: $globalEventReminderDays
-                )
-
-                Toggle(L10n.text("settings.reminder.long_no_meeting", "Long Time No Meeting Reminder"), isOn: $globalNotifyLongNoMeeting)
-                if globalNotifyLongNoMeeting {
-                    HStack {
-                        Text(L10n.text("settings.after", "After"))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Picker(L10n.text("settings.weeks", "Weeks"), selection: $globalLongNoMeetingWeeks) {
-                            ForEach(1...26, id: \.self) { value in
-                                Text(weeksLabel(value)).tag(value)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
+                        FiveMinuteTimePicker(
+                            selection: reminderTimeBinding,
+                            preferredStyle: .compact
+                        )
                     }
-                    .font(.subheadline)
-                }
-                Toggle(L10n.text("settings.reminder.post_note", "Reminder to Add Note After Meeting"), isOn: $globalNotifyPostMeetingNote)
+                    .frame(minHeight: 44, alignment: .center)
+                    .padding(.vertical, 6)
 
-                if !notificationStatusMessage.isEmpty {
-                    Text(notificationStatusMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Divider()
+
+                    reminderRow(
+                        title: L10n.text("settings.reminder.birthdays", "Birthdays"),
+                        isOn: $globalNotifyBirthday,
+                        days: $globalBirthdayReminderDays
+                    )
+                    .padding(.vertical, notificationRowPadding)
+
+                    Divider()
+
+                    reminderRow(
+                        title: L10n.text("settings.reminder.meetings", "Meetings"),
+                        isOn: $globalNotifyMeetings,
+                        days: $globalMeetingReminderDays
+                    )
+                    .padding(.vertical, notificationRowPadding)
+
+                    Divider()
+
+                    reminderRow(
+                        title: L10n.text("settings.reminder.events", "Events"),
+                        isOn: $globalNotifyEvents,
+                        days: $globalEventReminderDays
+                    )
+                    .padding(.vertical, notificationRowPadding)
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        Toggle(L10n.text("settings.reminder.followups", "To-Dos"), isOn: $globalNotifyFollowUps)
+                            .padding(.vertical, 2)
+
+                        if globalNotifyFollowUps {
+                            Text(L10n.text("settings.reminder.followups.hint", "Reminders are sent at the task due date and time."))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, notificationSubrowTopSpacing)
+                                .padding(.leading, notificationSubrowLeadingInset)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, notificationRowPadding)
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        Toggle(L10n.text("settings.reminder.long_no_meeting", "Long Time No Meeting Reminder"), isOn: $globalNotifyLongNoMeeting)
+                            .padding(.vertical, 2)
+
+                        if globalNotifyLongNoMeeting {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(L10n.text("settings.after", "After"))
+                                    .foregroundStyle(.secondary)
+
+                                Spacer()
+
+                                Picker(L10n.text("settings.weeks", "Weeks"), selection: $globalLongNoMeetingWeeks) {
+                                    ForEach(1...26, id: \.self) { value in
+                                        Text(weeksLabel(value)).tag(value)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                            }
+                            .font(.subheadline)
+                            .padding(.top, notificationSubrowTopSpacing)
+                            .padding(.leading, notificationSubrowLeadingInset)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, notificationRowPadding)
+
+                    Divider()
+
+                    Toggle(L10n.text("settings.reminder.post_note", "Reminder to Add Note After Meeting"), isOn: $globalNotifyPostMeetingNote)
+                        .padding(.vertical, notificationRowPadding)
+
+                    if !notificationStatusMessage.isEmpty {
+                        Divider()
+                        Text(notificationStatusMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, notificationRowPadding)
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, settingsSectionPadding)
         } header: {
-            Text(L10n.text("settings.notifications.global.header", "Global Notifications"))
+            Text(L10n.text("settings.notifications.global.header", "Notifications"))
         }
     }
 
     /// Section for calendar-specific display preferences.
     private var calendarSection: some View {
         Section {
-            Toggle(L10n.text("settings.calendar.show_birthdays", "Show Birthdays"), isOn: $showBirthdaysOnCalendar)
+            VStack(alignment: .leading, spacing: settingsControlSpacing) {
+                Toggle(L10n.text("settings.calendar.show_birthdays", "Show Birthdays"), isOn: $showBirthdaysOnCalendar)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, settingsSectionPadding)
         } header: {
             Text(L10n.text("calendar.title", "Calendar"))
         }
@@ -208,7 +271,7 @@ struct AppSettingsView: View {
     /// Section for managing globally reusable friend tags.
     private var tagsSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: settingsControlSpacing) {
                 addTagInput
 
                 if definedTags.isEmpty {
@@ -247,6 +310,8 @@ struct AppSettingsView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, settingsSectionPadding)
         } header: {
             Text(L10n.text("settings.tags.header", "Friend Tags"))
         }
@@ -254,11 +319,7 @@ struct AppSettingsView: View {
 
     /// Input row for adding new globally reusable tags.
     private var addTagInput: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L10n.text("settings.tags.add_placeholder", "Add tag"))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 TextField("", text: $newTag)
                     .textFieldStyle(.plain)
@@ -269,9 +330,7 @@ struct AppSettingsView: View {
                 let canAdd = !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 Button(action: addTag) {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title3)
                         .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.accent.opacity(0.35))
-                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
                 .disabled(!canAdd)
@@ -326,13 +385,17 @@ struct AppSettingsView: View {
     ///   - days: Lead-time setting in days.
     /// - Returns: A styled reminder configuration row.
     private func reminderRow(title: String, isOn: Binding<Bool>, days: Binding<Int>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             Toggle(L10n.text("settings.reminder.row", "%@ Reminder", title), isOn: isOn)
+                .padding(.vertical, 2)
+
             if isOn.wrappedValue {
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
                     Text(L10n.text("settings.when", "When"))
                         .foregroundStyle(.secondary)
+
                     Spacer()
+
                     Picker(L10n.text("settings.reminder.days", "Reminder Days"), selection: days) {
                         ForEach(1...7, id: \.self) { value in
                             Text(reminderDaysLabel(value)).tag(value)
@@ -342,10 +405,12 @@ struct AppSettingsView: View {
                     .pickerStyle(.menu)
                 }
                 .font(.subheadline)
+                .padding(.top, notificationSubrowTopSpacing)
+                .padding(.leading, notificationSubrowLeadingInset)
             }
         }
-        .padding(.vertical, 2)
-    }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }   
 
     /// Produces a localized label for day-offset picker values.
     ///

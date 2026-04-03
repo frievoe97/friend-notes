@@ -21,6 +21,7 @@ enum AppTheme {
     /// Semantic timeline colors.
     static let birthday = Color("SemanticBirthday")
     static let event = Color("SemanticEvent")
+    static let followUp = Color("SemanticFollowUp")
 
     /// Destructive semantic colors.
     static let danger = Color("SemanticDanger")

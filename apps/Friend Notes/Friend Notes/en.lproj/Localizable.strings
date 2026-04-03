@@ -4,12 +4,14 @@
 "tab.settings" = "Settings";
 
 "common.add" = "Add";
+"common.back" = "Back";
 "common.cancel" = "Cancel";
 "common.close" = "Close";
 "common.delete" = "Delete";
 "common.delete_irreversible" = "This action cannot be undone.";
 "common.done" = "Done";
 "common.edit" = "Edit";
+"common.friend" = "Friend";
 "common.save" = "Save";
 
 "friends.title" = "Friends";
@@ -61,29 +63,30 @@
 "friend.history.show_all" = "Show all (%d)";
 "friend.history.show_less" = "Show fewer";
 "friend.history.upcoming.empty" = "No upcoming meetings or events.";
-"friend.history.upcoming.show_all" = "Show all upcoming (%d)";
+"friend.history.upcoming.show_all" = "Show more (%d)";
 "friend.history.upcoming.show_less" = "Show fewer upcoming";
 "friend.history.past.show" = "Show past (%d)";
 "friend.history.past.hide" = "Hide past";
 "friend.history.past.show_all" = "Show all past (%d)";
 "friend.history.past.show_less" = "Show fewer past";
 "friend.section.gift_ideas" = "Gift Ideas";
+"friend.section.follow_ups" = "To-Dos";
 "friend.gifts.empty" = "No gift ideas yet.";
-"friend.gifts.open.empty" = "No open gift ideas.";
-"friend.gifts.open.show_all" = "Show all gift ideas (%d)";
-"friend.gifts.open.show_less" = "Show fewer gift ideas";
-"friend.gifts.gifted.show" = "Show completed (%d)";
-"friend.gifts.gifted.hide" = "Hide completed (%d)";
-"friend.gifts.gifted.show_all" = "Show all completed (%d)";
-"friend.gifts.gifted.show_less" = "Show fewer completed";
+"friend.gifts.open.empty" = "No pending gift ideas.";
+"friend.gifts.open.show_all" = "Show more (%d)";
+"friend.gifts.open.show_less" = "Show less";
+"friend.gifts.gifted.show" = "Show gifted ideas (%d)";
+"friend.gifts.gifted.hide" = "Hide gifted ideas (%d)";
+"friend.gifts.gifted.show_all" = "Show all gifted ideas (%d)";
+"friend.gifts.gifted.show_less" = "Show fewer gifted ideas";
 "list.detail.empty" = "Tap + to add an entry.";
 "meeting.section.upcoming" = "Upcoming";
 "meeting.section.past" = "Past";
 "meeting.show_more" = "+%d more";
-"friend.gifts.gifted.section" = "Completed";
+"friend.gifts.gifted.section" = "Gifted";
 "gifts.title" = "Gifts";
 "gifts.search.placeholder" = "Search gifts, notes, or people";
-"gifts.empty.hidden_gifted" = "No open gift ideas. You can show completed gifts below.";
+"gifts.empty.hidden_gifted" = "No pending gift ideas. You can show gifted ideas below.";
 "gifts.assignee.label" = "Person";
 "gifts.assignee.none" = "No person assigned";
 
@@ -103,6 +106,25 @@
 "gift.delete.button" = "Delete Gift Idea";
 "gift.delete.title" = "Delete Gift Idea?";
 
+"followup.new.title" = "New To-Do";
+"followup.edit.title" = "Edit To-Do";
+"followup.untitled" = "Untitled To-Do";
+"followup.field.title" = "Title";
+"followup.field.note" = "Note";
+"followup.field.due" = "Due";
+"followup.empty" = "No To-Dos yet.";
+"followup.section.pending" = "Pending";
+"followup.section.done" = "Done";
+"followup.mark_done" = "Mark as done";
+"followup.delete.button" = "Delete To-Do";
+"followup.delete.title" = "Delete To-Do?";
+"followup.calendar.subtitle.no_friend" = "To-Do • %@";
+"followup.calendar.subtitle.with_friend" = "%@ • %@";
+
+"entry.new.title" = "New Entry";
+"entry.edit.title" = "Edit Entry";
+"entry.name" = "Title";
+"entry.note" = "Note (optional)";
 "list.edit_entry" = "Edit entry";
 
 "meeting.kind.meeting" = "Meeting";
@@ -168,7 +190,7 @@
 "statistics.top_friends.empty" = "No interactions yet.";
 "statistics.timeline.title" = "Timeline Split";
 "statistics.gifts.title" = "Gift Ideas";
-"statistics.gifts.open" = "Open";
+"statistics.gifts.open" = "Pending";
 "statistics.gifts.gifted" = "Gifted";
 "statistics.gifts.empty" = "No gift ideas yet.";
 
@@ -176,15 +198,17 @@
 "settings.notifications.denied" = "Notifications denied. Enable them in iOS Settings.";
 "settings.notifications.enabled" = "Notifications enabled.";
 "settings.notifications.enable" = "Enable Notifications";
-"settings.notifications.global.header" = "Global Notifications";
+"settings.notifications.global.header" = "Notifications";
 "settings.notifications.global.footer" = "Notification settings are defined globally for the whole app.";
-"settings.reminder.row" = "%@ Reminder";
+"settings.reminder.row" = "%@";
 "settings.reminder.birthdays" = "Birthdays";
 "settings.reminder.meetings" = "Meetings";
 "settings.reminder.events" = "Events";
+"settings.reminder.followups" = "To-Dos";
+"settings.reminder.followups.hint" = "Reminders are sent at the task due date and time.";
 "settings.reminder.time" = "Reminder time";
-"settings.reminder.long_no_meeting" = "Long Time No Meeting Reminder";
-"settings.reminder.post_note" = "Reminder to Add Note After Meeting";
+"settings.reminder.long_no_meeting" = "Long time no meeting";
+"settings.reminder.post_note" = "Post-meeting note";
 "settings.reminder.days" = "Reminder Days";
 "settings.reminder.same_day" = "On the same day";
 "settings.reminder.days_before" = "%d day(s) before";
@@ -209,7 +233,7 @@
 
 "privacy.intro" = "Friend Notes processes your contact data locally on your device.";
 "privacy.storage.title" = "Data Storage";
-"privacy.storage.body" = "Name, nickname, birthday, tags, notes, hobbies, food, music, movies/series, meetings, events, gift ideas and notification settings.";
+"privacy.storage.body" = "Name, nickname, birthday, tags, notes, hobbies, food, music, movies/series, meetings, events, gift ideas, To-Dos and notification settings.";
 
 "privacy.notifications.title" = "Notifications";
 "privacy.notifications.body" = "If enabled, Friend Notes uses local iOS notifications. Scheduling happens locally on the device.";
@@ -234,4 +258,7 @@
 "notification.post_note.title" = "Meeting Note";
 "notification.post_note.body.no_friends" = "Add a note for your meeting now.";
 "notification.post_note.body.with_friends" = "Add a note for your meeting with %@ now.";
+"notification.followup.title" = "To-Do Reminder";
+"notification.followup.body.no_friend" = "To-Do due: %@";
+"notification.followup.body.with_friend" = "To-Do due for %@: %@";
 "notification.target.missing" = "The related item could not be found.";

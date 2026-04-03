@@ -71,3 +71,56 @@ struct FiveMinuteDateTimePicker: UIViewRepresentable {
         }
     }
 }
+
+/// UIKit-backed time-only picker constrained to 5-minute increments.
+struct FiveMinuteTimePicker: UIViewRepresentable {
+    /// Bound time value (date component is ignored by the picker UI).
+    @Binding var selection: Date
+    /// Visual picker style (`.compact` by default, `.wheels` for sheet pickers).
+    var preferredStyle: UIDatePickerStyle = .compact
+
+    func makeUIView(context: Context) -> UIDatePicker {
+        let picker = UIDatePicker()
+        picker.datePickerMode = .time
+        picker.preferredDatePickerStyle = preferredStyle
+        picker.locale = .current
+        picker.minuteInterval = 5
+        picker.setContentCompressionResistancePriority(.required, for: .horizontal)
+        picker.setContentCompressionResistancePriority(.required, for: .vertical)
+        picker.setContentHuggingPriority(.required, for: .horizontal)
+        picker.setContentHuggingPriority(.required, for: .vertical)
+        picker.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+        return picker
+    }
+
+    func updateUIView(_ uiView: UIDatePicker, context: Context) {
+        uiView.minuteInterval = 5
+        let roundedSelection = FiveMinuteDateTimePicker.roundedToFiveMinutes(selection)
+        if abs(uiView.date.timeIntervalSince(roundedSelection)) > 0.5 {
+            uiView.date = roundedSelection
+        }
+        if abs(selection.timeIntervalSince(roundedSelection)) > 0.5 {
+            DispatchQueue.main.async {
+                selection = roundedSelection
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(selection: $selection)
+    }
+
+    final class Coordinator: NSObject {
+        @Binding private var selection: Date
+
+        init(selection: Binding<Date>) {
+            _selection = selection
+        }
+
+        @objc func valueChanged(_ sender: UIDatePicker) {
+            let rounded = FiveMinuteDateTimePicker.roundedToFiveMinutes(sender.date)
+            sender.setDate(rounded, animated: false)
+            selection = rounded
+        }
+    }
+}

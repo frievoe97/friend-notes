@@ -4,12 +4,14 @@
 "tab.settings" = "Einstellungen";
 
 "common.add" = "Hinzufügen";
+"common.back" = "Zurück";
 "common.cancel" = "Abbrechen";
 "common.close" = "Schließen";
 "common.delete" = "Löschen";
 "common.delete_irreversible" = "Diese Aktion kann nicht rückgängig gemacht werden.";
 "common.done" = "Fertig";
 "common.edit" = "Bearbeiten";
+"common.friend" = "Freund";
 "common.save" = "Speichern";
 
 "friends.title" = "Freunde";
@@ -61,29 +63,30 @@
 "friend.history.show_all" = "Alle anzeigen (%d)";
 "friend.history.show_less" = "Weniger anzeigen";
 "friend.history.upcoming.empty" = "Keine kommenden Treffen oder Ereignisse.";
-"friend.history.upcoming.show_all" = "Alle kommenden anzeigen (%d)";
+"friend.history.upcoming.show_all" = "Mehr anzeigen (%d)";
 "friend.history.upcoming.show_less" = "Weniger kommende anzeigen";
 "friend.history.past.show" = "Vergangene anzeigen (%d)";
 "friend.history.past.hide" = "Vergangene ausblenden";
 "friend.history.past.show_all" = "Alle vergangenen anzeigen (%d)";
 "friend.history.past.show_less" = "Weniger vergangene anzeigen";
 "friend.section.gift_ideas" = "Geschenkideen";
+"friend.section.follow_ups" = "To-Dos";
 "friend.gifts.empty" = "Noch keine Geschenkideen.";
-"friend.gifts.open.empty" = "Keine offenen Geschenkideen.";
-"friend.gifts.open.show_all" = "Alle Geschenkideen anzeigen (%d)";
-"friend.gifts.open.show_less" = "Weniger Geschenkideen anzeigen";
-"friend.gifts.gifted.show" = "Abgehakte anzeigen (%d)";
-"friend.gifts.gifted.hide" = "Abgehakte ausblenden (%d)";
-"friend.gifts.gifted.show_all" = "Alle abgehakten anzeigen (%d)";
-"friend.gifts.gifted.show_less" = "Weniger abgehakte anzeigen";
-"list.detail.empty" = "Tippe + um einen Eintrag hinzuzufügen.";
+"friend.gifts.open.empty" = "Keine ausstehenden Geschenkideen.";
+"friend.gifts.open.show_all" = "Mehr anzeigen (%d)";
+"friend.gifts.open.show_less" = "Weniger anzeigen";
+"friend.gifts.gifted.show" = "Verschenkte anzeigen (%d)";
+"friend.gifts.gifted.hide" = "Verschenkte ausblenden (%d)";
+"friend.gifts.gifted.show_all" = "Alle verschenkten anzeigen (%d)";
+"friend.gifts.gifted.show_less" = "Weniger verschenkte anzeigen";
+"list.detail.empty" = "Tippe auf + um einen Eintrag hinzuzufügen.";
 "meeting.section.upcoming" = "Demnächst";
 "meeting.section.past" = "Vergangen";
 "meeting.show_more" = "+%d weitere";
-"friend.gifts.gifted.section" = "Erledigt";
+"friend.gifts.gifted.section" = "Verschenkt";
 "gifts.title" = "Geschenke";
 "gifts.search.placeholder" = "Geschenke, Notizen oder Personen suchen";
-"gifts.empty.hidden_gifted" = "Keine offenen Geschenkideen. Du kannst unten erledigte Geschenkideen einblenden.";
+"gifts.empty.hidden_gifted" = "Keine ausstehenden Geschenkideen. Du kannst unten verschenkte Geschenkideen einblenden.";
 "gifts.assignee.label" = "Person";
 "gifts.assignee.none" = "Keine Person zugeordnet";
 
@@ -99,10 +102,29 @@
 "gift.note" = "Notiz";
 "gift.url" = "URL";
 "gift.url.clear" = "URL löschen";
-"gift.already_gifted" = "Schon geschenkt";
+"gift.already_gifted" = "Bereits verschenkt";
 "gift.delete.button" = "Geschenkidee löschen";
 "gift.delete.title" = "Geschenkidee löschen?";
 
+"followup.new.title" = "Neues To-Do";
+"followup.edit.title" = "To-Do bearbeiten";
+"followup.untitled" = "Unbenanntes To-Do";
+"followup.field.title" = "Titel";
+"followup.field.note" = "Notiz";
+"followup.field.due" = "Fällig am";
+"followup.empty" = "Noch keine To-Dos.";
+"followup.section.pending" = "Ausstehend";
+"followup.section.done" = "Erledigt";
+"followup.mark_done" = "Als erledigt markieren";
+"followup.delete.button" = "To-Do löschen";
+"followup.delete.title" = "To-Do löschen?";
+"followup.calendar.subtitle.no_friend" = "To-Do · %@";
+"followup.calendar.subtitle.with_friend" = "%@ · %@";
+
+"entry.new.title" = "Neuer Eintrag";
+"entry.edit.title" = "Eintrag bearbeiten";
+"entry.name" = "Titel";
+"entry.note" = "Notiz (optional)";
 "list.edit_entry" = "Eintrag bearbeiten";
 
 "meeting.kind.meeting" = "Treffen";
@@ -168,7 +190,7 @@
 "statistics.top_friends.empty" = "Noch keine Interaktionen.";
 "statistics.timeline.title" = "Timeline-Aufteilung";
 "statistics.gifts.title" = "Geschenkideen";
-"statistics.gifts.open" = "Offen";
+"statistics.gifts.open" = "Ausstehend";
 "statistics.gifts.gifted" = "Verschenkt";
 "statistics.gifts.empty" = "Noch keine Geschenkideen.";
 
@@ -176,15 +198,17 @@
 "settings.notifications.denied" = "Benachrichtigungen abgelehnt. Aktiviere sie in den iOS-Einstellungen.";
 "settings.notifications.enabled" = "Benachrichtigungen aktiviert.";
 "settings.notifications.enable" = "Benachrichtigungen aktivieren";
-"settings.notifications.global.header" = "Globale Benachrichtigungen";
+"settings.notifications.global.header" = "Benachrichtigungen";
 "settings.notifications.global.footer" = "Benachrichtigungen werden global für die ganze App definiert.";
-"settings.reminder.row" = "%@-Erinnerung";
+"settings.reminder.row" = "%@";
 "settings.reminder.birthdays" = "Geburtstage";
 "settings.reminder.meetings" = "Treffen";
 "settings.reminder.events" = "Ereignisse";
+"settings.reminder.followups" = "To-Dos";
+"settings.reminder.followups.hint" = "Erinnerungen werden zum Fälligkeitszeitpunkt gesendet.";
 "settings.reminder.time" = "Erinnerungszeit";
-"settings.reminder.long_no_meeting" = "Lange-nicht-getroffen-Erinnerung";
-"settings.reminder.post_note" = "Erinnerung zum Notiz-Hinzufügen nach Treffen";
+"settings.reminder.long_no_meeting" = "Lange nicht getroffen";
+"settings.reminder.post_note" = "Notiz nach Treffen";
 "settings.reminder.days" = "Erinnerungstage";
 "settings.reminder.same_day" = "Am selben Tag";
 "settings.reminder.days_before" = "%d Tag(e) vorher";
@@ -209,7 +233,7 @@
 
 "privacy.intro" = "Friend Notes verarbeitet deine Kontaktdaten lokal auf deinem Gerät.";
 "privacy.storage.title" = "Datenspeicherung";
-"privacy.storage.body" = "Name, Spitzname, Geburtstag, Tags, Notizen, Hobbys, Essen, Musik, Filme/Serien, Treffen, Ereignisse, Geschenkideen und Benachrichtigungs-Einstellungen.";
+"privacy.storage.body" = "Name, Spitzname, Geburtstag, Tags, Notizen, Hobbys, Essen, Musik, Filme/Serien, Treffen, Ereignisse, Geschenkideen, To-Dos und Benachrichtigungs-Einstellungen.";
 "privacy.notifications.title" = "Benachrichtigungen";
 "privacy.notifications.body" = "Wenn aktiviert, nutzt Friend Notes lokale iOS-Benachrichtigungen. Die Planung erfolgt lokal auf dem Gerät.";
 "privacy.sharing.title" = "Datenweitergabe";
@@ -233,4 +257,7 @@
 "notification.post_note.title" = "Notiz zum Treffen";
 "notification.post_note.body.no_friends" = "Füge jetzt eine Notiz zu deinem Treffen hinzu.";
 "notification.post_note.body.with_friends" = "Füge jetzt eine Notiz zu deinem Treffen mit %@ hinzu.";
+"notification.followup.title" = "To-Do-Erinnerung";
+"notification.followup.body.no_friend" = "To-Do fällig: %@";
+"notification.followup.body.with_friend" = "To-Do für %@ fällig: %@";
 "notification.target.missing" = "Der zugehörige Eintrag konnte nicht gefunden werden.";

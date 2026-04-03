@@ -40,7 +40,7 @@ struct DateTimeWheelPickerSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
                     Text(title)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -57,12 +57,10 @@ struct DateTimeWheelPickerSheet: View {
                     .padding(.vertical, 8)
                     .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    DatePicker(
-                        L10n.text("meeting.time", "Time"),
+                    FiveMinuteTimePicker(
                         selection: timeSelectionBinding,
-                        displayedComponents: .hourAndMinute
+                        preferredStyle: .wheels
                     )
-                    .datePickerStyle(.compact)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                     .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -74,14 +72,21 @@ struct DateTimeWheelPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(L10n.text("common.cancel", "Cancel"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) {
+                    Button {
                         onSave(FiveMinuteDateTimePicker.roundedToFiveMinutes(selectedDate))
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .fontWeight(.semibold)
+                    .accessibilityLabel(L10n.text("common.save", "Save"))
                 }
             }
         }

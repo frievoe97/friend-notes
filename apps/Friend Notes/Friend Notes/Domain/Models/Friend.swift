@@ -29,6 +29,10 @@ final class Friend {
     @Relationship(deleteRule: .cascade, inverse: \GiftIdea.friend)
     var giftIdeas: [GiftIdea] = []
 
+    /// Follow-up task entities owned by this friend.
+    @Relationship(deleteRule: .cascade, inverse: \FollowUpTask.friend)
+    var followUpTasks: [FollowUpTask] = []
+
     /// Category entry entities owned by this friend.
     @Relationship(deleteRule: .cascade, inverse: \FriendEntry.friend)
     var entries: [FriendEntry] = []
@@ -81,6 +85,30 @@ final class Friend {
         return combinedName.isEmpty
             ? L10n.text("friend.unnamed", "Unnamed")
             : combinedName
+    }
+
+    /// Returns the canonical name source used for avatar initials.
+    ///
+    /// - Returns: Full name when available, otherwise nickname/display fallback.
+    var avatarInitialsSource: String {
+        let trimmedFullName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedFullName.isEmpty {
+            return trimmedFullName
+        }
+
+        let trimmedNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedNickname.isEmpty {
+            return trimmedNickname
+        }
+
+        return displayName
+    }
+
+    /// Returns the stable color seed used for deterministic avatar coloring.
+    ///
+    /// - Returns: String form of the persistent model identifier.
+    var avatarColorSeed: String {
+        "\(persistentModelID)"
     }
 
     /// Returns the sort key used by friend list ordering.

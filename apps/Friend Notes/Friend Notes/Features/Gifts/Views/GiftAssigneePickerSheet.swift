@@ -53,7 +53,7 @@ struct GiftAssigneePickerSheet: View {
                                 dismiss()
                             } label: {
                                 HStack(spacing: 12) {
-                                    AvatarView(name: friend.displayName, size: 30)
+                                    AvatarView(friend: friend, size: 30)
                                     Text(friend.displayName)
                                         .foregroundStyle(.primary)
                                     Spacer()
@@ -79,7 +79,12 @@ struct GiftAssigneePickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.done", "Done")) { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
+                    }
+                    .accessibilityLabel(L10n.text("common.done", "Done"))
                 }
             }
         }

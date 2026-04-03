@@ -16,6 +16,7 @@ struct FriendDetailView: View {
     @State private var showingQuickAddMeeting = false
     @State private var showingQuickAddEvent = false
     @State private var showingQuickAddGiftIdea = false
+    @State private var showingQuickAddFollowUp = false
     @State private var isContactEditing = false
     @State private var firstNameDraft = ""
     @State private var lastNameDraft = ""
@@ -84,6 +85,11 @@ struct FriendDetailView: View {
         friend.giftIdeas.filter { !$0.isGifted }.count
     }
 
+    /// Count of pending follow-up tasks linked to this friend.
+    private var openFollowUpsCount: Int {
+        friend.followUpTasks.filter { !$0.isCompleted }.count
+    }
+
     /// `true` when the current name draft can be committed.
     private var canCommitNameDraft: Bool {
         let first = firstNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -111,6 +117,11 @@ struct FriendDetailView: View {
             .sheet(isPresented: $showingQuickAddGiftIdea) {
                 AddGiftIdeaSheet { title, note, url in
                     addQuickGiftIdea(title: title, note: note, url: url)
+                }
+            }
+            .sheet(isPresented: $showingQuickAddFollowUp) {
+                AddFollowUpTaskSheet { title, note, dueDate, _ in
+                    addQuickFollowUp(title: title, note: note, dueDate: dueDate)
                 }
             }
             .alert(L10n.text("friend.delete.title", "Delete %@?", friend.displayName), isPresented: $showingDeleteAlert) {
@@ -223,15 +234,16 @@ struct FriendDetailView: View {
                             icon: "note.text", count: friend.entryList(for: "notes").count)
             }
             .buttonStyle(.plain)
-                NavigationLink {
-                    FriendMeetingsView(friend: friend)
-                } label: {
-                    categoryRow(
-                        title: L10n.text("friend.section.history", "Meetings / Events"),
-                        icon: "clock.arrow.circlepath",
-                        count: upcomingMeetingsCount
-                    )
-                }
+
+            NavigationLink {
+                FriendMeetingsView(friend: friend)
+            } label: {
+                categoryRow(
+                    title: L10n.text("friend.section.history", "Meetings / Events"),
+                    icon: "clock.arrow.circlepath",
+                    count: upcomingMeetingsCount
+                )
+            }
             .buttonStyle(.plain)
 
             NavigationLink {
@@ -244,6 +256,17 @@ struct FriendDetailView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            NavigationLink {
+                FriendFollowUpsView(friend: friend)
+            } label: {
+                categoryRow(
+                    title: L10n.text("friend.section.follow_ups", "To-Dos"),
+                    icon: "checklist",
+                    count: openFollowUpsCount
+                )
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
     }
@@ -251,7 +274,6 @@ struct FriendDetailView: View {
     private func categoryRow(title: String, icon: String, count: Int) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .frame(width: 30, height: 30)
             Text(title)
@@ -264,7 +286,6 @@ struct FriendDetailView: View {
                     .foregroundStyle(.secondary)
             }
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 0)
@@ -285,7 +306,6 @@ struct FriendDetailView: View {
                     }
                 } label: {
                     Image(systemName: friend.isFavorite ? "star.fill" : "star")
-                        .font(.body.weight(.semibold))
                         .foregroundStyle(friend.isFavorite ? AppTheme.accent : .secondary)
                 }
                 .accessibilityLabel("Favorite")
@@ -294,63 +314,70 @@ struct FriendDetailView: View {
 
         // MARK: - Trailing (Grouped)
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Section {
-                    Button {
-                        quickAddEntryCategory = .hobbies
-                    } label: {
-                        Label(L10n.text("friend.section.hobbies", "Hobbies"), systemImage: "figure.walk")
+            if !isContactEditing {
+                Menu {
+                    Section {
+                        Button {
+                            quickAddEntryCategory = .hobbies
+                        } label: {
+                            Label(L10n.text("friend.section.hobbies", "Hobbies"), systemImage: "figure.walk")
+                        }
+
+                        Button {
+                            quickAddEntryCategory = .foods
+                        } label: {
+                            Label(L10n.text("friend.section.food", "Food"), systemImage: "fork.knife")
+                        }
+
+                        Button {
+                            quickAddEntryCategory = .musics
+                        } label: {
+                            Label(L10n.text("friend.section.music", "Music"), systemImage: "music.note")
+                        }
+
+                        Button {
+                            quickAddEntryCategory = .moviesSeries
+                        } label: {
+                            Label(L10n.text("friend.section.movies_series", "Movies / Series"), systemImage: "film.fill")
+                        }
+
+                        Button {
+                            quickAddEntryCategory = .notes
+                        } label: {
+                            Label(L10n.text("friend.section.notes", "Notes"), systemImage: "note.text")
+                        }
                     }
 
-                    Button {
-                        quickAddEntryCategory = .foods
-                    } label: {
-                        Label(L10n.text("friend.section.food", "Food"), systemImage: "fork.knife")
-                    }
+                    Section {
+                        Button {
+                            showingQuickAddMeeting = true
+                        } label: {
+                            Label(L10n.text("meeting.new.title", "New Meeting"), systemImage: "person.2.fill")
+                        }
 
-                    Button {
-                        quickAddEntryCategory = .musics
-                    } label: {
-                        Label(L10n.text("friend.section.music", "Music"), systemImage: "music.note")
-                    }
+                        Button {
+                            showingQuickAddEvent = true
+                        } label: {
+                            Label(L10n.text("event.new.title", "New Event"), systemImage: "flag.fill")
+                        }
 
-                    Button {
-                        quickAddEntryCategory = .moviesSeries
-                    } label: {
-                        Label(L10n.text("friend.section.movies_series", "Movies / Series"), systemImage: "film.fill")
-                    }
+                        Button {
+                            showingQuickAddGiftIdea = true
+                        } label: {
+                            Label(L10n.text("gift.new.title", "New Gift Idea"), systemImage: "gift.fill")
+                        }
 
-                    Button {
-                        quickAddEntryCategory = .notes
-                    } label: {
-                        Label(L10n.text("friend.section.notes", "Notes"), systemImage: "note.text")
+                        Button {
+                            showingQuickAddFollowUp = true
+                        } label: {
+                            Label(L10n.text("followup.new.title", "New To-Do"), systemImage: "checklist")
+                        }
                     }
+                } label: {
+                    Image(systemName: "plus")
                 }
-
-                Section {
-                    Button {
-                        showingQuickAddMeeting = true
-                    } label: {
-                        Label(L10n.text("meeting.new.title", "New Meeting"), systemImage: "person.2.fill")
-                    }
-
-                    Button {
-                        showingQuickAddEvent = true
-                    } label: {
-                        Label(L10n.text("event.new.title", "New Event"), systemImage: "flag.fill")
-                    }
-
-                    Button {
-                        showingQuickAddGiftIdea = true
-                    } label: {
-                        Label(L10n.text("gift.new.title", "New Gift Idea"), systemImage: "gift.fill")
-                    }
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.body.weight(.semibold))
+                .accessibilityLabel(L10n.text("common.add", "Add"))
             }
-            .accessibilityLabel(L10n.text("common.add", "Add"))
         }
 
         // MARK: - Primary Action (separate right button)
@@ -363,8 +390,6 @@ struct FriendDetailView: View {
                 }
             } label: {
                 Image(systemName: isContactEditing ? "checkmark" : "pencil")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 18, height: 18, alignment: .center)
             }
             .disabled(isContactEditing && !canCommitNameDraft)
             .accessibilityLabel(
@@ -414,7 +439,7 @@ struct FriendDetailView: View {
         }()
 
         return VStack(spacing: 12) {
-            AvatarView(name: avatarName, size: 88)
+            AvatarView(name: avatarName, size: 88, colorSeed: friend.avatarColorSeed)
                 .padding(.top, 16)
 
             if isContactEditing {
@@ -422,7 +447,7 @@ struct FriendDetailView: View {
                 let canClearLastName = !lastNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 let canClearNickname = !nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         inputFieldLabel(L10n.text("friend.first_name", "First Name"))
                         HStack(spacing: 8) {
                             TextField("", text: $firstNameDraft)
@@ -438,9 +463,7 @@ struct FriendDetailView: View {
                                 firstNameDraft = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.body)
                                     .foregroundStyle(.tertiary)
-                                    .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -452,7 +475,7 @@ struct FriendDetailView: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         inputFieldLabel(L10n.text("friend.last_name", "Last Name"))
                         HStack(spacing: 8) {
                             TextField("", text: $lastNameDraft)
@@ -468,9 +491,7 @@ struct FriendDetailView: View {
                                 lastNameDraft = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.body)
                                     .foregroundStyle(.tertiary)
-                                    .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -482,7 +503,7 @@ struct FriendDetailView: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         inputFieldLabel(L10n.text("friend.nickname", "Nickname"))
                         HStack(spacing: 8) {
                             TextField("", text: $nicknameDraft)
@@ -498,9 +519,7 @@ struct FriendDetailView: View {
                                 nicknameDraft = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.body)
                                     .foregroundStyle(.tertiary)
-                                    .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -568,7 +587,6 @@ struct FriendDetailView: View {
                         Button { friend.birthday = nil } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
-                                .font(.title3)
                         }
                     } else {
                         Text((friend.birthday ?? Date()).formatted(date: .long, time: .omitted))
@@ -727,6 +745,21 @@ struct FriendDetailView: View {
         )
         modelContext.insert(idea)
         friend.giftIdeas.append(idea)
+    }
+
+    /// Adds a new follow-up task preassigned to the current friend.
+    private func addQuickFollowUp(title: String, note: String, dueDate: Date) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        let task = FollowUpTask(
+            title: trimmedTitle,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            dueDate: dueDate,
+            isCompleted: false
+        )
+        task.friend = friend
+        modelContext.insert(task)
+        friend.followUpTasks.append(task)
     }
 
     /// Starts editing by copying persisted values into local name drafts.

@@ -38,14 +38,13 @@ struct StringListEditor: View {
     }
 
     private var addItemRow: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             Text(placeholder)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
                 Image(systemName: "plus.circle.fill")
-                    .font(.title3)
                     .foregroundStyle(AppTheme.accent)
                 TextField("", text: $newItem, axis: .vertical)
                     .font(.body)
@@ -54,7 +53,6 @@ struct StringListEditor: View {
                     .onSubmit(addItem)
                 Button(action: addItem) {
                     Image(systemName: "plus")
-                        .font(.caption.weight(.semibold))
                 }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
@@ -84,7 +82,7 @@ struct StringListEditor: View {
     @ViewBuilder
     private func itemTextView(index: Int, item: String) -> some View {
         if editIndex == index {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text(L10n.text("list.edit_entry", "Edit entry"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -109,7 +107,6 @@ struct StringListEditor: View {
             if editIndex == index {
                 Button(action: commitEdit) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
                         .foregroundStyle(AppTheme.accent)
                 }
             } else {
@@ -117,7 +114,6 @@ struct StringListEditor: View {
                     startEditing(index: index)
                 } label: {
                     Image(systemName: "pencil.circle.fill")
-                        .font(.title3)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -131,7 +127,6 @@ struct StringListEditor: View {
                 }
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
                     .foregroundStyle(.secondary)
             }
         }

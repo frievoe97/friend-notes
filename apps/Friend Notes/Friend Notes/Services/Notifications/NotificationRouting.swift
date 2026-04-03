@@ -6,6 +6,7 @@ import Combine
 enum AppNotificationRoute: Equatable {
     case friend(id: String)
     case meeting(id: String)
+    case followUp(id: String)
 }
 
 /// Shared store that buffers the most recent notification route until the UI consumes it.
@@ -53,6 +54,8 @@ final class NotificationRouteStore: ObservableObject {
             publish(.friend(id: routeID))
         case "meeting":
             publish(.meeting(id: routeID))
+        case "followup":
+            publish(.followUp(id: routeID))
         default:
             break
         }

@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Add Friend Sheet
+// MARK: - Add Friend
 
-/// Modal flow for creating a new friend with optional profile details.
+/// Screen for creating a new friend with optional profile details.
 struct AddFriendView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -82,57 +82,68 @@ struct AddFriendView: View {
         return draftFriend.giftIdeas.filter { !$0.isGifted }.count
     }
 
+    /// Count of pending follow-up tasks linked to the current draft friend.
+    private var openFollowUpsCount: Int {
+        guard let draftFriend else { return 0 }
+        return draftFriend.followUpTasks.filter { !$0.isCompleted }.count
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 28) {
-                    header
-                    Divider().padding(.horizontal, 24)
-                    birthdaySection
-                    tagsSection
-                    categoriesSection
-                }
-                .padding(.bottom, 40)
+        ScrollView {
+            VStack(spacing: 28) {
+                header
+                Divider().padding(.horizontal, 24)
+                birthdaySection
+                tagsSection
+                categoriesSection
             }
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(navigationTitleText)
-            .navigationBarTitleDisplayMode(.inline)
-            .interactiveDismissDisabled()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) {
-                        cancelCreation()
-                    }
+            .padding(.bottom, 40)
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle(navigationTitleText)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    cancelCreation()
+                } label: {
+                    Image(systemName: "chevron.backward")
                 }
+                .accessibilityLabel(L10n.text("common.back", "Back"))
+            }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) { save() }
-                        .fontWeight(.semibold)
-                        .disabled(!canSave)
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    save()
+                } label: {
+                    Image(systemName: "checkmark")
                 }
+                .disabled(!canSave)
+                .accessibilityLabel(L10n.text("common.save", "Save"))
+            }
 
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(L10n.text("common.done", "Done")) {
-                        focusedField = nil
-                        Keyboard.dismiss()
-                    }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(L10n.text("common.done", "Done")) {
+                    focusedField = nil
+                    Keyboard.dismiss()
                 }
             }
-            .sheet(isPresented: $showingBirthdayPicker) {
-                BirthdayPickerSheet(
-                    title: L10n.text("friend.section.birthday", "Birthday"),
-                    initialDate: draftFriend?.birthday ?? Date(),
-                    onSave: { selectedDate in
-                        draftFriend?.birthday = selectedDate
-                    }
-                )
-            }
-            .onAppear {
-                initializeDraftFriendIfNeeded()
-            }
+        }
+        .sheet(isPresented: $showingBirthdayPicker) {
+            BirthdayPickerSheet(
+                title: L10n.text("friend.section.birthday", "Birthday"),
+                initialDate: draftFriend?.birthday ?? Date(),
+                onSave: { selectedDate in
+                    draftFriend?.birthday = selectedDate
+                }
+            )
+        }
+        .onAppear {
+            initializeDraftFriendIfNeeded()
         }
         .appScreenBackground()
     }
@@ -145,7 +156,7 @@ struct AddFriendView: View {
                 .padding(.top, 16)
 
             VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 14) {
                     inputFieldLabel(L10n.text("friend.first_name", "First Name"))
                     TextField("", text: firstNameBinding)
                         .textFieldStyle(.plain)
@@ -160,7 +171,7 @@ struct AddFriendView: View {
                         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 14) {
                     inputFieldLabel(L10n.text("friend.last_name", "Last Name"))
                     TextField("", text: lastNameBinding)
                         .textFieldStyle(.plain)
@@ -175,7 +186,7 @@ struct AddFriendView: View {
                         .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 14) {
                     inputFieldLabel(L10n.text("friend.nickname", "Nickname"))
                     TextField("", text: nicknameBinding)
                         .textFieldStyle(.plain)
@@ -211,7 +222,6 @@ struct AddFriendView: View {
                     Button { draftFriend?.birthday = nil } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
-                            .font(.title3)
                     }
                 } else {
                     Button {
@@ -368,6 +378,17 @@ struct AddFriendView: View {
                     )
                 }
                 .buttonStyle(.plain)
+
+                NavigationLink {
+                    FriendFollowUpsView(friend: draftFriend)
+                } label: {
+                    categoryRow(
+                        title: L10n.text("friend.section.follow_ups", "To-Dos"),
+                        icon: "checklist",
+                        count: openFollowUpsCount
+                    )
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 12)
         )
@@ -376,7 +397,6 @@ struct AddFriendView: View {
     private func categoryRow(title: String, icon: String, count: Int) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .frame(width: 30, height: 30)
             Text(title)
@@ -389,7 +409,6 @@ struct AddFriendView: View {
                     .foregroundStyle(.secondary)
             }
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 0)

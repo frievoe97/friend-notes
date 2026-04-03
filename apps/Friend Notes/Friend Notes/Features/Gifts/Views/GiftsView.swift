@@ -94,7 +94,6 @@ struct GiftsView: View {
                         showingAddGiftIdea = true
                     } label: {
                         Image(systemName: "plus")
-                            .fontWeight(.semibold)
                     }
                 }
             }
@@ -152,7 +151,7 @@ struct GiftsView: View {
                         Button {
                             withAnimation { showAllOpen = true }
                         } label: {
-                            Text(L10n.text("friend.gifts.open.show_all", "Show all gift ideas (%d)", openIdeas.count))
+                            Text(L10n.text("friend.gifts.open.show_all", "Show more (%d)", openIdeas.count))
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.accent)
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -164,7 +163,7 @@ struct GiftsView: View {
                         Button {
                             withAnimation { showAllOpen = false }
                         } label: {
-                            Text(L10n.text("friend.gifts.open.show_less", "Show fewer gift ideas"))
+                            Text(L10n.text("friend.gifts.open.show_less", "Show less"))
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.accent)
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -314,7 +313,7 @@ private struct AddGlobalGiftIdeaSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("gift.name", "Name"))
                         TextField("", text: $title)
                             .textFieldStyle(.plain)
@@ -326,7 +325,7 @@ private struct AddGlobalGiftIdeaSheet: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("gift.url", "URL"))
                         TextField("", text: $url)
                             .textFieldStyle(.plain)
@@ -341,7 +340,7 @@ private struct AddGlobalGiftIdeaSheet: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("gift.note", "Note"))
                         TextField("", text: $note, axis: .vertical)
                             .textFieldStyle(.plain)
@@ -352,7 +351,7 @@ private struct AddGlobalGiftIdeaSheet: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("gifts.assignee.label", "Person"))
                         assignmentMenu
                     }
@@ -367,14 +366,21 @@ private struct AddGlobalGiftIdeaSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(L10n.text("common.cancel", "Cancel"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) {
+                    Button {
                         save()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .fontWeight(.semibold)
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityLabel(L10n.text("common.save", "Save"))
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -411,7 +417,7 @@ private struct AddGlobalGiftIdeaSheet: View {
         } label: {
             HStack(spacing: 10) {
                 if let selectedFriend {
-                    AvatarView(name: selectedFriend.displayName, size: 28)
+                    AvatarView(friend: selectedFriend, size: 28)
                 } else {
                     Circle()
                         .fill(AppTheme.subtleFillSelected)

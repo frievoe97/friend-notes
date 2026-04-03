@@ -42,7 +42,7 @@ struct FriendRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(name: friend.displayName, size: 46)
+            AvatarView(friend: friend, size: 46)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(friend.displayName)

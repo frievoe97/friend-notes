@@ -18,6 +18,7 @@ struct ContentView: View {
     private enum DeepLinkSheet: Identifiable {
         case friend(String)
         case meeting(String)
+        case followUp(String)
 
         var id: String {
             switch self {
@@ -25,6 +26,8 @@ struct ContentView: View {
                 return "friend-\(id)"
             case .meeting(let id):
                 return "meeting-\(id)"
+            case .followUp(let id):
+                return "followup-\(id)"
             }
         }
     }
@@ -32,6 +35,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allFriends: [Friend]
     @Query private var allMeetings: [Meeting]
+    @Query(sort: [SortDescriptor(\FollowUpTask.dueDate)]) private var allFollowUps: [FollowUpTask]
     @ObservedObject private var notificationRouteStore = NotificationRouteStore.shared
     @State private var hasSeededDebugData = false
     @State private var selectedTab: RootTab = .friends
@@ -48,6 +52,7 @@ struct ContentView: View {
     @AppStorage("globalLongNoMeetingWeeks") private var globalLongNoMeetingWeeks = 4
     @AppStorage("globalReminderTimeMinutes") private var globalReminderTimeMinutes = 9 * 60
     @AppStorage("globalNotifyPostMeetingNote") private var globalNotifyPostMeetingNote = true
+    @AppStorage("globalNotifyFollowUps") private var globalNotifyFollowUps = true
 
     /// Builds a stable signature string for all friends to detect scheduling-relevant changes.
     ///
@@ -84,6 +89,23 @@ struct ContentView: View {
         .joined(separator: "||")
     }
 
+    /// Builds a stable signature string for all follow-up tasks to detect scheduling-relevant changes.
+    ///
+    /// - Returns: A deterministic string derived from follow-up fields used by notifications.
+    private var followUpsSignature: String {
+        allFollowUps.map { task in
+            [
+                "\(task.persistentModelID)",
+                task.title,
+                task.note,
+                "\(task.dueDate.timeIntervalSince1970)",
+                "\(task.isCompleted)",
+                task.friend.map { "\($0.persistentModelID)" } ?? ""
+            ].joined(separator: "|")
+        }
+        .joined(separator: "||")
+    }
+
     /// Materializes persisted app settings into a notification scheduler configuration object.
     ///
     /// - Returns: Notification settings consumed by `NotificationService`.
@@ -99,7 +121,8 @@ struct ContentView: View {
             globalNotifyLongNoMeeting: globalNotifyLongNoMeeting,
             globalLongNoMeetingWeeks: globalLongNoMeetingWeeks,
             globalReminderTimeMinutes: globalReminderTimeMinutes,
-            globalNotifyPostMeetingNote: globalNotifyPostMeetingNote
+            globalNotifyPostMeetingNote: globalNotifyPostMeetingNote,
+            globalNotifyFollowUps: globalNotifyFollowUps
         )
     }
 
@@ -118,8 +141,10 @@ struct ContentView: View {
             "\(globalLongNoMeetingWeeks)",
             "\(globalReminderTimeMinutes)",
             "\(globalNotifyPostMeetingNote)",
+            "\(globalNotifyFollowUps)",
             friendsSignature,
-            meetingsSignature
+            meetingsSignature,
+            followUpsSignature
         ].joined(separator: "||")
     }
 
@@ -193,6 +218,9 @@ struct ContentView: View {
         case .meeting(let routeID):
             selectedTab = .calendar
             deepLinkSheet = .meeting(routeID)
+        case .followUp(let routeID):
+            selectedTab = .friends
+            deepLinkSheet = .followUp(routeID)
         }
     }
 
@@ -232,6 +260,22 @@ struct ContentView: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
             }
+        case .followUp(let routeID):
+            if let followUp = allFollowUps.first(where: { "\($0.persistentModelID)" == routeID }) {
+                NavigationStack {
+                    FollowUpTaskDetailView(task: followUp)
+                }
+            } else {
+                NavigationStack {
+                    ContentUnavailableView(
+                        L10n.text("friend.section.follow_ups", "To-Dos"),
+                        systemImage: "checklist",
+                        description: Text(L10n.text("notification.target.missing", "The related item could not be found."))
+                    )
+                    .navigationTitle(L10n.text("tab.friends", "Friends"))
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+            }
         }
     }
 
@@ -240,6 +284,7 @@ struct ContentView: View {
         await NotificationService.shared.rescheduleAll(
             friends: allFriends,
             meetings: allMeetings,
+            followUpTasks: allFollowUps,
             settings: appNotificationSettings
         )
     }
@@ -267,5 +312,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Friend.self, Meeting.self, GiftIdea.self, FriendEntry.self], inMemory: true)
+        .modelContainer(for: [Friend.self, Meeting.self, GiftIdea.self, FollowUpTask.self, FriendEntry.self], inMemory: true)
 }

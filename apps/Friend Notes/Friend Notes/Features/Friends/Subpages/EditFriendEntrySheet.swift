@@ -38,7 +38,7 @@ struct EditFriendEntrySheet: View {
                 let canClearTitle = !draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 let canClearNote = !draftNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("entry.name", "Title"))
                         HStack(spacing: 8) {
                             TextField("", text: $draftTitle)
@@ -51,9 +51,7 @@ struct EditFriendEntrySheet: View {
                                 draftTitle = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.body)
                                     .foregroundStyle(.tertiary)
-                                    .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -65,7 +63,7 @@ struct EditFriendEntrySheet: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("entry.note", "Note (optional)"))
                         HStack(alignment: .top, spacing: 8) {
                             TextField("", text: $draftNote, axis: .vertical)
@@ -78,9 +76,7 @@ struct EditFriendEntrySheet: View {
                                 draftNote = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.body)
                                     .foregroundStyle(.tertiary)
-                                    .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -97,20 +93,27 @@ struct EditFriendEntrySheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.clear)
-            .navigationTitle(L10n.text("entry.edit.title", "Edit Entry"))
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(L10n.text("common.cancel", "Cancel"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) {
+                    Button {
                         entry.title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                         entry.note = draftNote.trimmingCharacters(in: .whitespacesAndNewlines)
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
                     .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .fontWeight(.semibold)
+                    .accessibilityLabel(L10n.text("common.save", "Save"))
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -122,6 +125,12 @@ struct EditFriendEntrySheet: View {
             }
         }
         .appScreenBackground()
+    }
+
+    /// Dynamic title that mirrors the edited entry title.
+    private var navigationTitleText: String {
+        let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.text("entry.edit.title", "Edit Entry") : trimmed
     }
 
     /// Applies a shared label style for entry edit fields.

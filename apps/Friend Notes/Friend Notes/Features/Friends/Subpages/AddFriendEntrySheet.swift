@@ -28,7 +28,7 @@ struct AddFriendEntrySheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("entry.name", "Title"))
                         TextField("", text: $title)
                             .textFieldStyle(.plain)
@@ -40,7 +40,7 @@ struct AddFriendEntrySheet: View {
                             .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 14) {
                         fieldLabel(L10n.text("entry.note", "Note (optional)"))
                         TextField("", text: $note, axis: .vertical)
                             .textFieldStyle(.plain)
@@ -57,18 +57,26 @@ struct AddFriendEntrySheet: View {
             .scrollContentBackground(.hidden)
             .background(Color.clear)
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(L10n.text("entry.new.title", "New Entry"))
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.text("common.cancel", "Cancel")) { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(L10n.text("common.cancel", "Cancel"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.save", "Save")) {
+                    Button {
                         onSave(title, note)
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityLabel(L10n.text("common.save", "Save"))
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -80,6 +88,12 @@ struct AddFriendEntrySheet: View {
             }
         }
         .appScreenBackground()
+    }
+
+    /// Dynamic title that mirrors the entered entry title.
+    private var navigationTitleText: String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.text("entry.new.title", "New Entry") : trimmed
     }
 
     /// Applies a shared label style for entry form fields.

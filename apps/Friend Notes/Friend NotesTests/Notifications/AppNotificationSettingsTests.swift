@@ -14,7 +14,8 @@ final class AppNotificationSettingsTests: XCTestCase {
             globalNotifyLongNoMeeting: true,
             globalLongNoMeetingWeeks: 5,
             globalReminderTimeMinutes: 10 * 60,
-            globalNotifyPostMeetingNote: false
+            globalNotifyPostMeetingNote: false,
+            globalNotifyFollowUps: true
         )
 
         XCTAssertTrue(settings.notificationsEnabled)
@@ -28,6 +29,7 @@ final class AppNotificationSettingsTests: XCTestCase {
         XCTAssertEqual(settings.globalLongNoMeetingWeeks, 5)
         XCTAssertEqual(settings.globalReminderTimeMinutes, 10 * 60)
         XCTAssertFalse(settings.globalNotifyPostMeetingNote)
+        XCTAssertTrue(settings.globalNotifyFollowUps)
     }
 
     func testStructUsesValueSemantics() {
@@ -42,16 +44,20 @@ final class AppNotificationSettingsTests: XCTestCase {
             globalNotifyLongNoMeeting: true,
             globalLongNoMeetingWeeks: 4,
             globalReminderTimeMinutes: 9 * 60,
-            globalNotifyPostMeetingNote: true
+            globalNotifyPostMeetingNote: true,
+            globalNotifyFollowUps: true
         )
 
         var copy = original
         copy.notificationsEnabled = false
         copy.globalReminderTimeMinutes = 8 * 60
+        copy.globalNotifyFollowUps = false
 
         XCTAssertTrue(original.notificationsEnabled)
         XCTAssertEqual(original.globalReminderTimeMinutes, 9 * 60)
+        XCTAssertTrue(original.globalNotifyFollowUps)
         XCTAssertFalse(copy.notificationsEnabled)
         XCTAssertEqual(copy.globalReminderTimeMinutes, 8 * 60)
+        XCTAssertFalse(copy.globalNotifyFollowUps)
     }
 }

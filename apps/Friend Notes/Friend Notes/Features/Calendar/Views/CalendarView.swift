@@ -18,10 +18,12 @@ private enum CalendarDisplayMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// Presents calendar-based and list-based timeline browsing for meetings, events, and birthdays.
+/// Presents calendar-based and list-based timeline browsing for meetings, events, birthdays, and follow-ups.
 struct CalendarView: View {
+    @Environment(\.modelContext) private var modelContext
     @AppStorage("showBirthdaysOnCalendar") private var showBirthdaysOnCalendar = true
     @Query(sort: [SortDescriptor(\Meeting.startDate), SortDescriptor(\Meeting.endDate)]) private var meetings: [Meeting]
+    @Query(sort: [SortDescriptor(\FollowUpTask.dueDate)]) private var followUpTasks: [FollowUpTask]
     @Query(sort: [SortDescriptor(\Friend.lastName), SortDescriptor(\Friend.firstName)]) private var friends: [Friend]
 
     @State private var displayedMonth: Date = {
@@ -31,6 +33,7 @@ struct CalendarView: View {
     @State private var selectedDate: Date = Date()
     @State private var showingAddMeeting = false
     @State private var showingAddEvent = false
+    @State private var showingAddFollowUp = false
     @State private var displayMode: CalendarDisplayMode = .calendar
 
     private let cal = Calendar.current
@@ -73,9 +76,14 @@ struct CalendarView: View {
                         } label: {
                             Label(L10n.text("event.new.title", "New Event"), systemImage: "flag.fill")
                         }
+
+                        Button {
+                            showingAddFollowUp = true
+                        } label: {
+                            Label(L10n.text("followup.new.title", "New To-Do"), systemImage: "checklist")
+                        }
                     } label: {
                         Image(systemName: "plus")
-                            .font(.body.weight(.semibold))
                     }
                     .accessibilityLabel(L10n.text("common.add", "Add"))
                 }
@@ -85,6 +93,20 @@ struct CalendarView: View {
             }
             .sheet(isPresented: $showingAddEvent) {
                 AddEventView(initialDate: selectedDate)
+            }
+            .sheet(isPresented: $showingAddFollowUp) {
+                AddFollowUpTaskSheet(
+                    allFriends: friends.sorted {
+                        $0.sortName.localizedCaseInsensitiveCompare($1.sortName) == .orderedAscending
+                    }
+                ) { title, note, dueDate, selectedFriendID in
+                    addFollowUpTask(
+                        title: title,
+                        note: note,
+                        dueDate: dueDate,
+                        selectedFriendID: selectedFriendID
+                    )
+                }
             }
             .onChange(of: displayedMonth) { _, newMonth in
                 if cal.isDate(newMonth, equalTo: Date(), toGranularity: .month) {
@@ -131,7 +153,11 @@ struct CalendarView: View {
                     .padding(.top, 16)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .scrollDisabled(selectedDayBirthdays.isEmpty && selectedDayEntries.isEmpty)
+            .scrollDisabled(
+                selectedDayBirthdays.isEmpty &&
+                selectedDayEntries.isEmpty &&
+                selectedDayFollowUps.isEmpty
+            )
             .scrollContentBackground(.hidden)
             .background(Color.clear)
         }
@@ -200,13 +226,15 @@ struct CalendarView: View {
             ForEach(Array(daysInMonth.enumerated()), id: \.offset) { _, date in
                 if let date {
                     let dayEntries = entriesOn(date)
+                    let dayFollowUps = followUpsOn(date)
                     DayCell(
                         date: date,
                         isSelected: cal.isDate(date, inSameDayAs: selectedDate),
                         isToday: cal.isDateInToday(date),
                         hasMeeting: dayEntries.contains(where: { $0.kind == .meeting }),
                         hasEvent: dayEntries.contains(where: { $0.kind == .event }),
-                        hasBirthday: showBirthdaysOnCalendar && !birthdaysOn(date).isEmpty
+                        hasBirthday: showBirthdaysOnCalendar && !birthdaysOn(date).isEmpty,
+                        hasFollowUp: !dayFollowUps.isEmpty
                     )
                     .onTapGesture {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -220,7 +248,7 @@ struct CalendarView: View {
         }
     }
 
-    /// Detail list for birthdays and entries on the currently selected day.
+    /// Detail list for birthdays, meetings/events, and follow-up tasks on the currently selected day.
     private var dayEventsList: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(selectedDate, format: .dateTime.weekday(.wide).day().month(.wide).year())
@@ -228,7 +256,7 @@ struct CalendarView: View {
                 .padding(.horizontal, 28)
                 .padding(.bottom, 14)
 
-            if selectedDayBirthdays.isEmpty && selectedDayEntries.isEmpty {
+            if selectedDayBirthdays.isEmpty && selectedDayEntries.isEmpty && selectedDayFollowUps.isEmpty {
                 Text(L10n.text("calendar.day.empty", "No events"))
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
@@ -254,6 +282,15 @@ struct CalendarView: View {
                         Divider().padding(.leading, 68)
                     }
                 }
+                ForEach(selectedDayFollowUps) { task in
+                    NavigationLink(destination: FollowUpTaskDetailView(task: task)) {
+                        FollowUpEventRow(task: task)
+                    }
+                    .buttonStyle(.plain)
+                    if task.persistentModelID != selectedDayFollowUps.last?.persistentModelID {
+                        Divider().padding(.leading, 68)
+                    }
+                }
             }
         }
         .padding(.bottom, 40)
@@ -267,6 +304,11 @@ struct CalendarView: View {
     /// Meeting/event entries shown for the currently selected day.
     private var selectedDayEntries: [Meeting] {
         entriesOn(selectedDate)
+    }
+
+    /// Follow-up tasks shown for the currently selected day.
+    private var selectedDayFollowUps: [FollowUpTask] {
+        followUpsOn(selectedDate)
     }
 
     /// Chronological timeline grouped by calendar week (future entries only).
@@ -351,6 +393,17 @@ struct CalendarView: View {
                 )
             }
             .buttonStyle(.plain)
+        case .followUp(let task):
+            NavigationLink(destination: FollowUpTaskDetailView(task: task)) {
+                UpcomingRow(
+                    icon: task.isCompleted ? "checkmark.circle.fill" : "checklist",
+                    iconColor: AppTheme.followUp,
+                    title: task.displayTitle,
+                    subtitle: item.subtitle,
+                    date: item.date
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -384,6 +437,16 @@ struct CalendarView: View {
             .sorted { $0.startDate < $1.startDate }
     }
 
+    /// Returns follow-up tasks due on a given calendar day.
+    ///
+    /// - Parameter date: Day to inspect.
+    /// - Returns: Tasks sorted by due time ascending.
+    private func followUpsOn(_ date: Date) -> [FollowUpTask] {
+        followUpTasks
+            .filter { cal.isDate($0.dueDate, inSameDayAs: date) }
+            .sorted { $0.dueDate < $1.dueDate }
+    }
+
     /// Returns friends whose birthday month/day matches a given date.
     ///
     /// - Parameter date: Day used for month/day comparison.
@@ -396,7 +459,7 @@ struct CalendarView: View {
         }
     }
 
-    /// Builds a merged timeline list that includes only future birthdays and entries.
+    /// Builds a merged timeline list that includes future birthdays, entries, and pending follow-ups.
     ///
     /// - Returns: Timeline items sorted by date ascending.
     private func timelineEvents() -> [UpcomingEventItem] {
@@ -433,6 +496,14 @@ struct CalendarView: View {
                 date: meeting.startDate,
                 kind: .entry(meeting),
                 subtitle: meetingTimelineSubtitle(for: meeting)
+            ))
+        }
+
+        for task in followUpTasks where !task.isCompleted && task.dueDate >= startOfToday {
+            result.append(.init(
+                date: task.dueDate,
+                kind: .followUp(task),
+                subtitle: followUpTimelineSubtitle(for: task)
             ))
         }
 
@@ -499,6 +570,23 @@ struct CalendarView: View {
         return "\(meeting.friends.map(\.displayName).joined(separator: ", ")) • \(timeLabel)"
     }
 
+    /// Creates the subtitle shown below timeline titles for follow-up tasks.
+    ///
+    /// - Parameter task: Follow-up task model.
+    /// - Returns: Localized subtitle including friend name when available and due time.
+    private func followUpTimelineSubtitle(for task: FollowUpTask) -> String {
+        let timeLabel = task.dueDate.formatted(date: .omitted, time: .shortened)
+        if let friend = task.friend {
+            return L10n.text(
+                "followup.calendar.subtitle.with_friend",
+                "%@ • %@",
+                friend.displayName,
+                timeLabel
+            )
+        }
+        return L10n.text("followup.calendar.subtitle.no_friend", "To-Do • %@", timeLabel)
+    }
+
     /// Creates a birthday title in the preferred compact format (e.g. `30. Geburtstag von Mia`).
     ///
     /// - Parameters:
@@ -516,6 +604,40 @@ struct CalendarView: View {
         }
         return L10n.text("calendar.birthday.title", "%@ Birthday", friend.displayName)
     }
+
+    /// Creates a new follow-up task from calendar quick-add.
+    ///
+    /// - Parameters:
+    ///   - title: Raw title input from the add sheet.
+    ///   - note: Raw optional note text.
+    ///   - dueDate: Selected due date and time.
+    ///   - selectedFriendID: Optional friend assignment identifier.
+    private func addFollowUpTask(
+        title: String,
+        note: String,
+        dueDate: Date,
+        selectedFriendID: PersistentIdentifier?
+    ) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let task = FollowUpTask(
+            title: trimmed,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            dueDate: dueDate,
+            isCompleted: false
+        )
+        let assignedFriend: Friend? = {
+            guard let selectedFriendID else { return nil }
+            return friends.first(where: { $0.persistentModelID == selectedFriendID })
+        }()
+        if let friend = assignedFriend {
+            task.friend = friend
+        }
+        modelContext.insert(task)
+        if let friend = assignedFriend {
+            friend.followUpTasks.append(task)
+        }
+    }
 }
 
 // MARK: - Models
@@ -526,6 +648,7 @@ private struct UpcomingEventItem: Identifiable {
     enum ItemKind {
         case birthday(Friend)
         case entry(Meeting)
+        case followUp(FollowUpTask)
     }
 
     /// Stable identity used for list rendering and scroll anchoring.
@@ -536,6 +659,8 @@ private struct UpcomingEventItem: Identifiable {
             return "birthday-\(friend.persistentModelID)-\(stamp)"
         case .entry(let meeting):
             return "entry-\(meeting.persistentModelID)"
+        case .followUp(let task):
+            return "followup-\(task.persistentModelID)"
         }
     }
     let date: Date

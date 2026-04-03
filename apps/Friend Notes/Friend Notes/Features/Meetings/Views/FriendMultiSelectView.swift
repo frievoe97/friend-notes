@@ -153,7 +153,7 @@ struct FriendMultiSelectView: View {
     /// - Returns: A stylized row with add/remove affordance.
     private func friendSelectionRow(friend: Friend, isSelected: Bool) -> some View {
         HStack(spacing: 12) {
-            AvatarView(name: friend.displayName, size: 34)
+            AvatarView(friend: friend, size: 34)
             Text(friend.displayName)
                 .font(.body)
                 .foregroundStyle(.primary)

@@ -43,7 +43,6 @@ struct FriendGiftsView: View {
                     showingAddGiftIdea = true
                 } label: {
                     Image(systemName: "plus")
-                        .font(.body.weight(.semibold))
                 }
                 .accessibilityLabel(L10n.text("common.add", "Add"))
             }
@@ -77,7 +76,7 @@ struct FriendGiftsView: View {
                         systemImage: "gift.fill"
                     )
                 } description: {
-                    Text(L10n.text("friend.gifts.empty", "No gift ideas yet."))
+                    Text(L10n.text("list.detail.empty", "Tap + to add an entry."))
                 }
             }
         }

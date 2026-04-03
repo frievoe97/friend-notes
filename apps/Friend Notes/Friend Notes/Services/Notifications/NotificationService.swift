@@ -57,12 +57,14 @@ final class NotificationService {
     /// - Parameters:
     ///   - friends: Current friend records used for birthday and "long time no meeting" reminders.
     ///   - meetings: Current timeline entries used for meeting/event reminders.
+    ///   - followUpTasks: Current follow-up tasks used for due-date reminders.
     ///   - settings: Global notification preferences.
     ///
     /// - Note: When permissions are missing or disabled in settings, scheduling exits safely without throwing.
     func rescheduleAll(
         friends: [Friend],
         meetings: [Meeting],
+        followUpTasks: [FollowUpTask],
         settings: AppNotificationSettings
     ) async {
         await clearManagedNotifications()
@@ -249,6 +251,42 @@ final class NotificationService {
                 }
             }
         }
+
+        if settings.globalNotifyFollowUps {
+            for task in followUpTasks where !task.isCompleted {
+                guard let fireDate = resolvedFireDate(
+                    preferredDate: task.dueDate,
+                    anchorDate: task.dueDate,
+                    referenceDate: now,
+                    calendar: calendar
+                ) else { continue }
+
+                let content = UNMutableNotificationContent()
+                content.title = L10n.text("notification.followup.title", "To-Do Reminder")
+                if let friend = task.friend {
+                    content.body = L10n.text(
+                        "notification.followup.body.with_friend",
+                        "To-Do due for %@: %@",
+                        friend.displayName,
+                        task.displayTitle
+                    )
+                } else {
+                    content.body = L10n.text(
+                        "notification.followup.body.no_friend",
+                        "To-Do due: %@",
+                        task.displayTitle
+                    )
+                }
+                content.sound = .default
+                content.userInfo = followUpRouteUserInfo(task)
+
+                let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                let identifier = "\(prefix)followup.\(task.persistentModelID)"
+                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+                _ = await add(request)
+            }
+        }
     }
 
     /// Calculates the next birthday reminder date.
@@ -426,6 +464,15 @@ final class NotificationService {
             "route_type": "meeting",
             "route_id": "\(meeting.persistentModelID)",
             "route_tab": "calendar"
+        ]
+    }
+
+    /// Creates notification route metadata for follow-up-task-targeted notifications.
+    private func followUpRouteUserInfo(_ task: FollowUpTask) -> [AnyHashable: Any] {
+        [
+            "route_type": "followup",
+            "route_id": "\(task.persistentModelID)",
+            "route_tab": "friends"
         ]
     }
 

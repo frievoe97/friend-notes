@@ -34,6 +34,15 @@ final class NotificationRouteStoreTests: XCTestCase {
         XCTAssertEqual(NotificationRouteStore.shared.pendingRoute, .meeting(id: "meeting-123"))
     }
 
+    func testHandleUserInfoPublishesFollowUpRoute() {
+        NotificationRouteStore.shared.handle(userInfo: [
+            "route_type": "followup",
+            "route_id": "followup-123",
+        ])
+
+        XCTAssertEqual(NotificationRouteStore.shared.pendingRoute, .followUp(id: "followup-123"))
+    }
+
     func testHandleUserInfoIgnoresMissingRouteType() {
         NotificationRouteStore.shared.handle(userInfo: [
             "route_id": "friend-123",

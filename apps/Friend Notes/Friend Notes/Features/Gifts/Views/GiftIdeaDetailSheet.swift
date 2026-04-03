@@ -140,25 +140,25 @@ struct GiftIdeaDetailSheet: View {
     @ViewBuilder
     /// Renders read-only card content for view mode.
     private var readOnlyContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             fieldLabel(L10n.text("gift.name", "Name"))
             readOnlyRow(value: idea.title)
         }
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             fieldLabel(L10n.text("gift.url", "URL"))
             readOnlyURLRow(rawURL: idea.url)
         }
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             fieldLabel(L10n.text("gift.note", "Note"))
             readOnlyMultilineRow(value: idea.note.trimmingCharacters(in: .whitespacesAndNewlines))
         }
 
-        if allowsAssigneeEditing {
-            VStack(alignment: .leading, spacing: 6) {
-                fieldLabel(L10n.text("gifts.assignee.label", "Person"))
-                readOnlyAssigneeRow
+        if let friend = idea.friend {
+            VStack(alignment: .leading, spacing: 14) {
+                fieldLabel(L10n.text("common.friend", "Friend"))
+                readOnlyAssigneeRow(friend: friend)
             }
         }
     }
@@ -167,7 +167,7 @@ struct GiftIdeaDetailSheet: View {
     /// Renders editable form controls for edit mode.
     private var editableContent: some View {
         let canClearTitle = !draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             fieldLabel(L10n.text("gift.name", "Name"))
             HStack(spacing: 8) {
                 TextField("", text: $draftTitle)
@@ -180,9 +180,7 @@ struct GiftIdeaDetailSheet: View {
                     draftTitle = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.body)
                         .foregroundStyle(.tertiary)
-                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -196,7 +194,7 @@ struct GiftIdeaDetailSheet: View {
         }
 
         let canClearURL = !draftURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             fieldLabel(L10n.text("gift.url", "URL"))
             HStack(spacing: 8) {
                 TextField("", text: $draftURL)
@@ -212,9 +210,7 @@ struct GiftIdeaDetailSheet: View {
                     draftURL = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.body)
                         .foregroundStyle(.tertiary)
-                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.text("gift.url.clear", "Clear URL"))
@@ -228,7 +224,7 @@ struct GiftIdeaDetailSheet: View {
         }
 
         let canClearNote = !draftNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             fieldLabel(L10n.text("gift.note", "Note"))
             HStack(alignment: .top, spacing: 8) {
                 TextField("", text: $draftNote, axis: .vertical)
@@ -241,9 +237,7 @@ struct GiftIdeaDetailSheet: View {
                     draftNote = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.body)
                         .foregroundStyle(.tertiary)
-                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -257,8 +251,8 @@ struct GiftIdeaDetailSheet: View {
         }
 
         if allowsAssigneeEditing {
-            VStack(alignment: .leading, spacing: 6) {
-                fieldLabel(L10n.text("gifts.assignee.label", "Person"))
+            VStack(alignment: .leading, spacing: 14) {
+                fieldLabel(L10n.text("common.friend", "Friend"))
                 assignmentMenu
             }
         }
@@ -285,16 +279,21 @@ struct GiftIdeaDetailSheet: View {
     private var toolbarContent: some ToolbarContent {
         if isEditing {
             ToolbarItem(placement: .cancellationAction) {
-                Button(L10n.text("common.cancel", "Cancel")) {
+                Button {
                     cancelEditing()
+                } label: {
+                    Image(systemName: "xmark")
                 }
+                .accessibilityLabel(L10n.text("common.cancel", "Cancel"))
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(L10n.text("common.save", "Save")) {
+                Button {
                     saveChanges()
+                } label: {
+                    Image(systemName: "checkmark")
                 }
-                .fontWeight(.semibold)
                 .disabled(!canSave)
+                .accessibilityLabel(L10n.text("common.save", "Save"))
             }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -305,16 +304,18 @@ struct GiftIdeaDetailSheet: View {
             }
         } else {
             ToolbarItem(placement: .cancellationAction) {
-                Button(L10n.text("common.close", "Close")) {
+                Button {
                     dismiss()
+                } label: {
+                    Image(systemName: "xmark")
                 }
+                .accessibilityLabel(L10n.text("common.close", "Close"))
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button {
                     beginEditing()
                 } label: {
                     Image(systemName: "pencil")
-                        .font(.body.weight(.semibold))
                 }
                 .accessibilityLabel(L10n.text("common.edit", "Edit"))
             }
@@ -462,29 +463,26 @@ struct GiftIdeaDetailSheet: View {
     }
 
     /// Read-only assignee card used in view mode.
-    private var readOnlyAssigneeRow: some View {
-        HStack(spacing: 10) {
-            if let friend = idea.friend {
-                AvatarView(name: friend.displayName, size: 28)
-                Text(friend.displayName)
-                    .foregroundStyle(.primary)
-            } else {
-                Circle()
-                    .fill(AppTheme.subtleFillSelected)
-                    .frame(width: 28, height: 28)
-                    .overlay {
-                        Image(systemName: "person.crop.circle.badge.plus")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                Text(L10n.text("gifts.assignee.none", "No person assigned"))
-                    .foregroundStyle(.secondary)
+    private func readOnlyAssigneeRow(friend: Friend) -> some View {
+        HStack {
+            NavigationLink(destination: FriendDetailView(friend: friend)) {
+                assigneeAvatarItem(friend: friend)
             }
+            .buttonStyle(.plain)
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(AppTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    /// Shared avatar item used for assignee display.
+    private func assigneeAvatarItem(friend: Friend) -> some View {
+        VStack(spacing: 6) {
+            AvatarView(friend: friend, size: 48)
+            Text(friend.displayName)
+                .font(.caption2)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(width: 72)
+        }
     }
 
     /// Editable assignee selector used in edit mode.
@@ -494,7 +492,7 @@ struct GiftIdeaDetailSheet: View {
         } label: {
             HStack(spacing: 10) {
                 if let selectedFriend {
-                    AvatarView(name: selectedFriend.displayName, size: 28)
+                    AvatarView(friend: selectedFriend, size: 28)
                 } else {
                     Circle()
                         .fill(AppTheme.subtleFillSelected)

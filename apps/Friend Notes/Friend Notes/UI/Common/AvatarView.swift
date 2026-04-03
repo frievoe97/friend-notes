@@ -8,6 +8,33 @@ struct AvatarView: View {
     let name: String
     /// Avatar diameter in points.
     let size: CGFloat
+    /// Stable seed used only for color hashing.
+    private let colorSeed: String
+
+    /// Creates an avatar from a raw name string.
+    ///
+    /// - Parameters:
+    ///   - name: Name source used for initials.
+    ///   - size: Avatar diameter.
+    ///   - colorSeed: Optional seed used for deterministic color hashing.
+    init(name: String, size: CGFloat, colorSeed: String? = nil) {
+        self.name = name
+        self.size = size
+        self.colorSeed = colorSeed ?? name
+    }
+
+    /// Creates an avatar from a friend model using canonical avatar identity rules.
+    ///
+    /// - Parameters:
+    ///   - friend: Friend used to derive initials and stable color.
+    ///   - size: Avatar diameter.
+    init(friend: Friend, size: CGFloat) {
+        self.init(
+            name: friend.avatarInitialsSource,
+            size: size,
+            colorSeed: friend.avatarColorSeed
+        )
+    }
 
     private var initials: String {
         let words = name.split(separator: " ").map(String.init)
@@ -26,8 +53,8 @@ struct AvatarView: View {
             .cyan,
             .blue
         ]
-        guard !name.isEmpty else { return .gray.opacity(0.85) }
-        let hash = name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
+        guard !colorSeed.isEmpty else { return .gray.opacity(0.85) }
+        let hash = colorSeed.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
         return palette[abs(hash) % palette.count]
     }
 

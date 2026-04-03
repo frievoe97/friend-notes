@@ -134,7 +134,7 @@ struct MeetingDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Button(isEditing ? L10n.text("common.done", "Done") : L10n.text("common.edit", "Edit")) {
+            Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isEditing.toggle()
                 }
@@ -145,8 +145,14 @@ struct MeetingDetailView: View {
                     showingEndPicker = false
                     showingFriendsPicker = false
                 }
+            } label: {
+                Image(systemName: isEditing ? "checkmark" : "pencil")
             }
-            .fontWeight(.semibold)
+            .accessibilityLabel(
+                isEditing
+                    ? L10n.text("common.done", "Done")
+                    : L10n.text("common.edit", "Edit")
+            )
         }
         ToolbarItemGroup(placement: .keyboard) {
             Spacer()
@@ -175,10 +181,12 @@ struct MeetingDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.done", "Done")) {
+                    Button {
                         showingFriendsPicker = false
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .fontWeight(.semibold)
+                    .accessibilityLabel(L10n.text("common.done", "Done"))
                 }
             }
         }
@@ -208,9 +216,7 @@ struct MeetingDetailView: View {
                         meeting.eventTitle = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.body)
                             .foregroundStyle(.tertiary)
-                            .frame(width: 20, height: 20)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L10n.text("common.clear", "Clear"))
@@ -373,7 +379,7 @@ struct MeetingDetailView: View {
     /// Renders one selectable participant row.
     private func friendPickerRow(_ friend: Friend, isSelected: Bool) -> some View {
         HStack(spacing: 12) {
-            AvatarView(name: friend.displayName, size: 36)
+            AvatarView(friend: friend, size: 36)
             Text(friend.displayName)
                 .font(.body)
                 .foregroundStyle(.primary)
@@ -409,7 +415,7 @@ struct MeetingDetailView: View {
     /// Renders one participant avatar + name item in the horizontal list.
     private func friendAvatarItem(_ friend: Friend) -> some View {
         VStack(spacing: 6) {
-            AvatarView(name: friend.displayName, size: 48)
+            AvatarView(friend: friend, size: 48)
             Text(friend.displayName)
                 .font(.caption2)
                 .lineLimit(1)
@@ -455,10 +461,8 @@ struct MeetingDetailView: View {
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
-                Image(systemName: "plus")
-                    .font(.caption.weight(.semibold))
-                    .frame(width: 64)
-                    .foregroundStyle(.secondary)
+                Color.clear
+                    .frame(width: 64, height: 12)
             }
             .padding(.top, 6)
             .contentShape(Rectangle())
